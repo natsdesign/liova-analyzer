@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analyseur de Site — Liova Studio</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;500&display=swap');
+
+    :root {
+      --bg: #0A0A0F;
+      --bg-card: #111118;
+      --accent: #6C63FF;
+      --green: #00E5A0;
+      --red: #FF4D4D;
+      --orange: #EF9F27;
+      --text: #F0F0F5;
+      --muted: #8888AA;
+      --border: rgba(255,255,255,0.08);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #app {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 28px 16px 40px;
+    }
+
+    /* ── INPUT ── */
+    .input-section { display: flex; flex-direction: column; gap: 16px; }
+
+    .brand { text-align: center; margin-bottom: 4px; }
+    .brand-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .brand-title span { color: var(--accent); }
+    .brand-sub { font-size: 13px; color: var(--muted); margin-top: 6px; }
+
+    .form-label { font-size: 13px; font-weight: 500; color: var(--muted); margin-bottom: 8px; display: block; }
+
+    .url-input {
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .url-input:focus { border-color: var(--accent); }
+    .url-input::placeholder { color: var(--muted); }
+
+    .analyze-btn {
+      width: 100%;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 15px;
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      animation: pulse-glow 2.5s ease-in-out infinite;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(108,99,255,0.4); }
+      50%       { box-shadow: 0 0 22px 7px rgba(108,99,255,0.22); }
+    }
+    .analyze-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 28px rgba(108,99,255,0.5); animation: none; }
+    .analyze-btn:active { transform: translateY(0); }
+
+    .btn-sub { text-align: center; font-size: 12px; color: var(--muted); }
+
+    /* ── ERROR ── */
+    .error-box {
+      display: none;
+      background: rgba(255,77,77,0.08);
+      border: 1px solid rgba(255,77,77,0.28);
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-size: 13px;
+      color: var(--red);
+      text-align: center;
+      line-height: 1.5;
+    }
+    .error-box.visible { display: block; }
+
+    /* ── LOADING ── */
+    .loading-section {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      padding: 40px 0;
+    }
+    .loading-section.visible { display: flex; }
+
+    .loading-message {
+      font-family: 'Instrument Serif', serif;
+      font-size: 18px;
+      color: var(--text);
+      min-height: 28px;
+      transition: opacity 0.25s;
+    }
+
+    .progress-track {
+      width: 100%;
+      background: rgba(255,255,255,0.06);
+      border-radius: 999px;
+      height: 4px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 999px;
+      width: 0%;
+      transition: width 0.75s ease;
+    }
+
+    /* ── RESULTS ── */
+    .results-section { display: none; flex-direction: column; gap: 24px; }
+    .results-section.visible { display: flex; }
+
+    .analyzed-url {
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      word-break: break-all;
+    }
+    .analyzed-url span { color: var(--accent); }
+
+    /* Score circle */
+    .score-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .circle-container {
+      position: relative;
+      width: 164px;
+      height: 164px;
+    }
+    .circle-container svg { transform: rotate(-90deg); }
+    .circle-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .score-num {
+      font-family: 'Instrument Serif', serif;
+      font-size: 44px;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .score-denom { font-size: 13px; color: var(--muted); }
+    .score-level {
+      font-family: 'Instrument Serif', serif;
+      font-size: 14px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    /* Category cards */
+    .cat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 420px) { .cat-grid { grid-template-columns: 1fr; } }
+    .cat-card.full { grid-column: 1 / -1; }
+
+    .cat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .cat-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .cat-name {
+      font-family: 'Instrument Serif', serif;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+    }
+    .cat-pts {
+      font-family: 'Instrument Serif', serif;
+      font-size: 15px;
+      font-weight: 700;
+    }
+    .cat-bar-track {
+      background: rgba(255,255,255,0.06);
+      border-radius: 999px;
+      height: 4px;
+      overflow: hidden;
+    }
+    .cat-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      width: 0%;
+      transition: width 0.8s ease 0.3s;
+    }
+    .criteria-list { display: flex; flex-direction: column; gap: 7px; }
+    .crit-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 7px;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .crit-icon { flex-shrink: 0; font-style: normal; margin-top: 1px; }
+    .crit-icon.ok   { color: var(--green); }
+    .crit-icon.fail { color: var(--red); }
+    .crit-label { color: var(--text); }
+    .crit-reco  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* Priorities */
+    .prio-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .section-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: 15px;
+      font-weight: 700;
+    }
+    .prio-item { display: flex; align-items: flex-start; gap: 14px; }
+    .prio-num {
+      font-family: 'Instrument Serif', serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1;
+      min-width: 22px;
+      flex-shrink: 0;
+    }
+    .prio-problem { font-size: 13px; font-weight: 500; color: var(--text); }
+    .prio-action  { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.45; }
+
+    /* CTA */
+    .cta-card {
+      border: 1px solid var(--accent);
+      border-radius: 14px;
+      padding: 24px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background: rgba(108,99,255,0.05);
+    }
+    .cta-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .cta-sub { font-size: 14px; color: var(--muted); line-height: 1.6; }
+    .cta-sub strong { color: var(--text); }
+    .cta-btn {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff;
+      text-decoration: none;
+      border-radius: 10px;
+      padding: 13px 28px;
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .cta-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(108,99,255,0.45); }
+
+    /* ── JS WARNING ── */
+    .js-warning {
+      display: none;
+      background: rgba(239,159,39,0.1);
+      border: 1px solid rgba(239,159,39,0.35);
+      border-radius: 12px;
+      padding: 13px 16px;
+      font-size: 13px;
+      color: var(--orange);
+      line-height: 1.55;
+      text-align: center;
+    }
+    .js-warning.visible { display: block; }
+
+    .score-note {
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+      margin-top: -4px;
+    }
+    .score-note.partial { color: var(--orange); }
+
+    /* ── EXAMPLES ── */
+    .examples-hint {
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.7;
+    }
+    .examples-hint strong { display: block; margin-bottom: 5px; }
+    .example-pills { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 4px; }
+    .example-pill {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 4px 11px;
+      font-size: 11px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+    .example-pill:hover { border-color: var(--accent); color: var(--accent); }
+
+    .crit-icon.skip { color: var(--orange); }
+
+    /* ── EMAIL CAPTURE ── */
+    .email-section {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 0 8px;
+    }
+    .email-section.visible { display: flex; }
+
+    .email-card {
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .email-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: 20px;
+      color: var(--text);
+      text-align: center;
+      line-height: 1.3;
+    }
+    .email-sub {
+      font-size: 13px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.6;
+      margin-top: -4px;
+    }
+    .email-error {
+      font-size: 12px;
+      color: var(--red);
+      text-align: center;
+      min-height: 16px;
+    }
+    .skip-link {
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      transition: color 0.2s;
+    }
+    .skip-link:hover { color: var(--text); }
+
+    /* Reset */
+    .reset-btn {
+      width: 100%;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 13px;
+      color: var(--muted);
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .reset-btn:hover { border-color: var(--accent); color: var(--accent); }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ══════════════ INPUT ══════════════ -->
+  <div class="input-section" id="inputSection">
+    <div class="brand">
+      <div class="brand-title">Analyse ton site <span>gratuitement</span></div>
+      <div class="brand-sub">Score SEO · Conversion · Technique · Contenu · Branding en 15 s</div>
+    </div>
+
+    <div>
+      <label class="form-label" for="urlInput">Entre l'URL de ton site</label>
+      <input
+        type="text"
+        id="urlInput"
+        class="url-input"
+        placeholder="https://tonstartup.fr"
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="off"
+        spellcheck="false"
+      />
+    </div>
+
+    <button class="analyze-btn" id="analyzeBtn">Analyser →</button>
+    <p class="btn-sub">Gratuit · 15 secondes · Aucune inscription</p>
+    <div class="error-box" id="errorBox"></div>
+
+    <div class="examples-hint">
+      <strong>Fonctionne mieux sur les sites statiques (WordPress, Webflow, Framer, Wix)</strong>
+      <div class="example-pills">
+        <span class="example-pill" data-url="https://www.qonto.com">qonto.com</span>
+        <span class="example-pill" data-url="https://welovedevs.com">welovedevs.com</span>
+        <span class="example-pill" data-url="https://www.spendesk.com">spendesk.com</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ LOADING ══════════════ -->
+  <div class="loading-section" id="loadingSection">
+    <div class="loading-message" id="loadingMsg">Récupération du site...</div>
+    <div class="progress-track" style="width:100%">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════ EMAIL CAPTURE ══════════════ -->
+  <div class="email-section" id="emailSection">
+    <div class="email-card">
+      <div class="email-title">Reçois ton rapport complet par email</div>
+      <div class="email-sub">On t'envoie aussi 3 conseils personnalisés basés sur ton score.</div>
+      <input
+        type="email"
+        id="emailInput"
+        class="url-input"
+        placeholder="ton@email.com"
+        autocomplete="email"
+      />
+      <div class="email-error" id="emailError"></div>
+      <button class="analyze-btn" id="emailSubmitBtn">Recevoir mon rapport →</button>
+      <span class="skip-link" id="skipEmailBtn">Non merci, voir les résultats sans email</span>
+    </div>
+  </div>
+
+  <!-- ══════════════ RESULTS ══════════════ -->
+  <div class="results-section" id="resultsSection">
+
+    <div class="analyzed-url" id="analyzedUrl"></div>
+
+    <!-- Score circle -->
+    <div class="score-wrap">
+      <div class="circle-container">
+        <svg width="164" height="164" viewBox="0 0 164 164">
+          <circle cx="82" cy="82" r="70" fill="none"
+            stroke="rgba(255,255,255,0.06)" stroke-width="10"/>
+          <circle id="scoreArc" cx="82" cy="82" r="70" fill="none"
+            stroke="var(--accent)" stroke-width="10"
+            stroke-linecap="round"
+            stroke-dasharray="439.82"
+            stroke-dashoffset="439.82"
+            style="transition: stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1), stroke 0.4s ease;"/>
+        </svg>
+        <div class="circle-center">
+          <div class="score-num" id="scoreNum">0</div>
+          <div class="score-denom">/100</div>
+        </div>
+      </div>
+      <div class="score-level" id="scoreLevel"></div>
+      <div class="score-note" id="scoreNote"></div>
+    </div>
+
+    <!-- JS Warning -->
+    <div class="js-warning" id="jsWarning">
+      ⚠️ Ce site utilise un framework JavaScript (Next.js / React / Vue).
+      L'analyse porte sur le HTML initial — certains éléments dynamiques peuvent ne pas être détectés.
+    </div>
+
+    <!-- Category cards -->
+    <div class="cat-grid" id="catGrid"></div>
+
+    <!-- Priorities -->
+    <div class="prio-section">
+      <div class="section-title">À corriger en priorité</div>
+      <div id="prioList"></div>
+    </div>
+
+    <!-- CTA -->
+    <div class="cta-card">
+      <div class="cta-title">Ton site a besoin d'un coup de boost ?</div>
+      <div class="cta-sub">
+        Liova Studio corrige tout ça en 14 jours —
+        <strong>2 500 € tout compris.</strong>
+      </div>
+      <a href="https://liova.studio" target="_blank" rel="noopener" class="cta-btn">
+        Voir le Launch Pack →
+      </a>
+    </div>
+
+    <!-- Reset -->
+    <button class="reset-btn" id="resetBtn">← Analyser un autre site</button>
+  </div>
+
+</div>
+
+<script>
+// ──────────────────────────────────────────────────────────────
+// Config — remplacer par ta clé API Brevo
+// ← Remplacer par ta clé API Brevo (Settings > API Keys)
+// ──────────────────────────────────────────────────────────────
+const BREVO_API_KEY = 'REMPLACER_PAR_TA_CLE_BREVO';
+const BREVO_LIST_ID = 3;
+
+// ──────────────────────────────────────────────────────────────
+// DOM refs
+// ──────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const inputSection   = $('inputSection');
+const loadingSection = $('loadingSection');
+const emailSection   = $('emailSection');
+const resultsSection = $('resultsSection');
+const urlInput       = $('urlInput');
+const analyzeBtn     = $('analyzeBtn');
+const errorBox       = $('errorBox');
+const loadingMsg     = $('loadingMsg');
+const progressFill   = $('progressFill');
+const scoreArc       = $('scoreArc');
+const scoreNum       = $('scoreNum');
+const scoreLevel     = $('scoreLevel');
+const catGrid        = $('catGrid');
+const prioList       = $('prioList');
+const analyzedUrl    = $('analyzedUrl');
+const resetBtn       = $('resetBtn');
+const emailInput     = $('emailInput');
+const emailSubmitBtn = $('emailSubmitBtn');
+const skipEmailBtn   = $('skipEmailBtn');
+const emailError     = $('emailError');
+
+// Pending state between loading → email capture → results
+let pendingResult = null;
+let pendingUrl    = null;
+
+// ──────────────────────────────────────────────────────────────
+// Events
+// ──────────────────────────────────────────────────────────────
+analyzeBtn.addEventListener('click', run);
+urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') run(); });
+resetBtn.addEventListener('click', reset);
+emailSubmitBtn.addEventListener('click', submitEmail);
+emailInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitEmail(); });
+skipEmailBtn.addEventListener('click', skipEmail);
+document.querySelectorAll('.example-pill').forEach(pill => {
+  pill.addEventListener('click', () => {
+    urlInput.value = pill.dataset.url;
+    urlInput.focus();
+  });
+});
+
+// ──────────────────────────────────────────────────────────────
+// Fetch helpers — proxies en parallèle, premier gagnant
+// ──────────────────────────────────────────────────────────────
+async function tryProxy(url, mode, timeoutMs) {
+  const ctrl = new AbortController();
+  const to = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(to);
+    if (!res.ok) throw new Error('bad_status');
+    if (mode === 'json') {
+      const json = await res.json();
+      if (!json || !json.contents || json.contents.length < 300) throw new Error('empty');
+      return json.contents;
+    } else {
+      const html = await res.text();
+      if (!html || html.length < 300) throw new Error('empty');
+      return html;
+    }
+  } catch (err) {
+    clearTimeout(to);
+    throw err;
+  }
+}
+
+async function fetchHtml(targetUrl) {
+  const enc = encodeURIComponent(targetUrl);
+  // Lance les 3 proxies en parallèle — on prend le premier qui réussit
+  try {
+    return await Promise.any([
+      tryProxy('https://api.allorigins.win/get?url=' + enc,         'json', 12000),
+      tryProxy('https://corsproxy.io/?' + enc,                      'raw',  12000),
+      tryProxy('https://api.codetabs.com/v1/proxy?quest=' + enc,    'raw',  12000),
+    ]);
+  } catch {
+    throw new Error('blocked');
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// Main flow
+// ──────────────────────────────────────────────────────────────
+async function run() {
+  let url = urlInput.value.trim();
+  if (!url) { showError("Saisis l'URL de ton site pour commencer."); return; }
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+
+  hideError();
+  showLoading();
+
+  // Loading messages
+  const msgs = [
+    'Récupération du site...',
+    'Analyse SEO...',
+    'Vérification de la conversion...',
+    'Calcul du score...'
+  ];
+  const progSteps = [12, 35, 62, 88];
+  let mi = 0;
+  setMsg(msgs[0], progSteps[0]);
+
+  const ticker = setInterval(() => {
+    mi = Math.min(mi + 1, msgs.length - 1);
+    fadeMsg(msgs[mi], progSteps[mi]);
+  }, 800);
+
+  // Fetch via proxy (allorigins primary, corsproxy fallback)
+  let html = null;
+  try {
+    html = await fetchHtml(url);
+  } catch (err) {
+    clearInterval(ticker);
+    showError('Ce site est inaccessible ou bloque les analyses. Essaie avec un autre site.');
+    backToInput();
+    return;
+  }
+
+  clearInterval(ticker);
+  setProgress(100);
+
+  // Parse & analyse
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  const result = analyse(doc, url, html);
+
+  setTimeout(() => {
+    hideLoading();
+    showEmailCapture(result, url);
+  }, 350);
+}
+
+// ──────────────────────────────────────────────────────────────
+// Analysis engine
+// ──────────────────────────────────────────────────────────────
+function analyse(doc, url, rawHtml) {
+  const bodyText = (doc.body ? (doc.body.innerText || doc.body.textContent || '') : '');
+  const bodyLow  = bodyText.toLowerCase();
+
+  const attr = (sel, att) => {
+    const el = doc.querySelector(sel);
+    return el ? (el.getAttribute(att) || '').trim() : '';
+  };
+
+  // ── SEO (25 pts) — critères durcis ──
+  const titleTxt = doc.querySelector('title') ? doc.querySelector('title').textContent.trim() : '';
+  const titleLen = titleTxt.length;
+  const titleOk  = titleLen >= 30 && titleLen <= 65;
+
+  const descTxt = attr('meta[name="description"]', 'content');
+  const descLen = descTxt.length;
+  const descOk  = descLen >= 120 && descLen <= 160;
+
+  const h1s  = doc.querySelectorAll('h1');
+  const h1Ok = h1s.length === 1;
+
+  const vpOk = !!doc.querySelector('meta[name="viewport"]');
+
+  // ── Conversion (25 pts) — CTA 4 pts, urgency 4 pts ajouté ──
+  const ctaOk = !!(doc.querySelector('form') || doc.querySelector('button'));
+
+  const emailRx   = /[\w.+-]+@[\w-]+\.[a-z]{2,}/i;
+  const telRx     = /(\+33|0)[1-9][\s.\-]?(\d{2}[\s.\-]?){3}\d{2}/;
+  const contactOk = emailRx.test(bodyText) || telRx.test(bodyText);
+
+  const spWords = ['témoignage','temoignage','avis','confiance','clients','résultats','resultats','garantie','testimonial','review','trust','customer','recommand'];
+  const spOk = spWords.some(w => bodyLow.includes(w));
+
+  const faqOk = Array.from(doc.querySelectorAll('h2,h3')).some(h => {
+    const t = h.textContent.toLowerCase();
+    return t.includes('faq') || t.includes('question') || t.includes('foire');
+  });
+
+  const urgencyWords = ["limité","limite","offre","places","aujourd'hui","maintenant","exclusif","dernier","dernière","derniere","urgent","expire"];
+  const urgencyOk = urgencyWords.some(w => bodyLow.includes(w));
+
+  // ── Technique (25 pts) ──
+  const httpsOk   = url.startsWith('https://');
+  const ogTitleOk = !!(attr('meta[property="og:title"]', 'content'));
+  const ogImageOk = !!(attr('meta[property="og:image"]', 'content'));
+  const faviconOk = !!(doc.querySelector('link[rel*="icon"]'));
+
+  // ── Contenu (25 pts) ──
+  const wordCount = bodyText.trim().split(/\s+/).filter(w => w.length > 1).length;
+  const wordsOk   = wordCount > 300;
+
+  const imgs    = doc.querySelectorAll('img');
+  const imgOk   = imgs.length > 0;
+
+  const withAlt = Array.from(imgs).filter(i => (i.getAttribute('alt') || '').trim().length > 0).length;
+  const altPct  = imgs.length > 0 ? Math.round(withAlt / imgs.length * 100) : 0;
+  const altOk   = imgs.length > 0 && altPct > 50;
+
+  let domain = '';
+  try { domain = new URL(url).hostname; } catch {}
+  const intLinkOk = Array.from(doc.querySelectorAll('a[href]')).some(a => {
+    const h = a.getAttribute('href') || '';
+    return h.startsWith('/') || (domain && h.includes(domain));
+  });
+
+  // ── Détection JS-heavy ──
+  const jsMarkers = ['__NEXT_DATA__', '__nuxt', 'data-reactroot', 'ng-version', '__NUXT__', 'data-n-head'];
+  const isJsHeavy = bodyText.trim().length < 500 || jsMarkers.some(m => rawHtml && rawHtml.includes(m));
+
+  // ── Branding & Perception (20 pts) ──
+  const fontOk = !!(
+    doc.querySelector('link[href*="fonts.googleapis.com"]') ||
+    doc.querySelector('link[href*="fonts.gstatic.com"]') ||
+    (rawHtml && rawHtml.includes('@font-face'))
+  );
+
+  const themeColorOk = !!(doc.querySelector('meta[name="theme-color"]'));
+  const manifestOk   = !!(doc.querySelector('link[rel="manifest"]'));
+
+  const inlineColors = new Set();
+  Array.from(doc.querySelectorAll('[style]')).forEach(el => {
+    const s = el.getAttribute('style') || '';
+    (s.match(/#[0-9a-fA-F]{3,8}|rgb\([^)]+\)|rgba\([^)]+\)/g) || [])
+      .forEach(c => inlineColors.add(c.toLowerCase()));
+  });
+  const fewColorsOk = inlineColors.size < 5;
+
+  const placeholderLinks = Array.from(doc.querySelectorAll('a[href="#"], a[href=""]'));
+  const noPlaceholderOk  = placeholderLinks.length === 0;
+
+  // ── Checks ──
+  const checks = [
+    // SEO (25 pts)
+    { id:'seo_title',     cat:'SEO',        pts:10, ok:titleOk,
+      label:`Balise <title> (30–65 chars)`,
+      reco: titleLen===0  ? "Ajoute une balise <title> décrivant ton activité."
+          : titleLen < 30 ? `Title trop courte (${titleLen} cars) — vise 30 à 65 caractères.`
+                          : `Title trop longue (${titleLen} cars) — passe sous 65 caractères.` },
+    { id:'seo_desc',      cat:'SEO',        pts:8,  ok:descOk,
+      label:`Meta description (120–160 chars)`,
+      reco: descLen===0   ? "Ajoute une meta description pour améliorer ton taux de clic sur Google."
+          : descLen < 120 ? `Meta description trop courte (${descLen} cars) — vise 120 à 160 caractères.`
+                          : `Meta description trop longue (${descLen} cars) — elle sera coupée sur Google.` },
+    { id:'seo_h1',        cat:'SEO',        pts:4,  ok:h1Ok,  jsDependent:true,
+      label:`Un seul <h1> présent`,
+      reco: h1s.length===0 ? "Ajoute un <h1> principal qui résume l'offre de ta page."
+                           : `Tu as ${h1s.length} balises <h1> — n'en garde qu'une seule.` },
+    { id:'seo_vp',        cat:'SEO',        pts:3,  ok:vpOk,
+      label:`Meta viewport présent`,
+      reco: `Ajoute <meta name="viewport" content="width=device-width, initial-scale=1">.` },
+    // Conversion (25 pts)
+    { id:'conv_cta',      cat:'Conversion', pts:4,  ok:ctaOk,     jsDependent:true,
+      label:`Formulaire ou bouton CTA présent`,
+      reco: "Ajoute un bouton d'appel à l'action (devis, contact, achat) bien visible." },
+    { id:'conv_contact',  cat:'Conversion', pts:6,  ok:contactOk, jsDependent:true,
+      label:`Email ou téléphone visible`,
+      reco: "Affiche clairement un email ou un numéro de téléphone sur ta page." },
+    { id:'conv_social',   cat:'Conversion', pts:6,  ok:spOk,      jsDependent:true,
+      label:`Social proof détecté`,
+      reco: "Ajoute des témoignages clients, avis ou résultats concrets pour rassurer tes visiteurs." },
+    { id:'conv_faq',      cat:'Conversion', pts:5,  ok:faqOk,     jsDependent:true,
+      label:`Section FAQ présente`,
+      reco: "Ajoute une FAQ pour lever les objections et améliorer le référencement." },
+    { id:'conv_urgency',  cat:'Conversion', pts:4,  ok:urgencyOk, jsDependent:true,
+      label:`Urgency trigger détecté`,
+      reco: "Utilise des mots d'urgence (limité, exclusif, aujourd'hui…) pour inciter à l'action." },
+    // Technique (25 pts)
+    { id:'tech_https',    cat:'Technique',  pts:8,  ok:httpsOk,
+      label:`HTTPS activé`,
+      reco: "Passe ton site en HTTPS — indispensable pour la sécurité et le SEO." },
+    { id:'tech_ogt',      cat:'Technique',  pts:6,  ok:ogTitleOk,
+      label:`Open Graph og:title présent`,
+      reco: `Ajoute <meta property="og:title" content="..."> pour soigner le partage réseaux.` },
+    { id:'tech_ogi',      cat:'Technique',  pts:6,  ok:ogImageOk,
+      label:`Open Graph og:image présent`,
+      reco: "Ajoute une image Open Graph pour que tes partages soient visuellement attractifs." },
+    { id:'tech_fav',      cat:'Technique',  pts:5,  ok:faviconOk,
+      label:`Favicon présente`,
+      reco: `Ajoute une favicon via <link rel="icon" href="..."> dans ton <head>.` },
+    // Contenu (25 pts)
+    { id:'cont_words',    cat:'Contenu',    pts:8,  ok:wordsOk,    jsDependent:true,
+      label:`Contenu > 300 mots (${wordCount} détectés)`,
+      reco: "Enrichis ton contenu — Google favorise les pages avec plus de 300 mots." },
+    { id:'cont_img',      cat:'Contenu',    pts:5,  ok:imgOk,      jsDependent:true,
+      label:`Au moins 1 image présente`,
+      reco: "Ajoute des images pour rendre ta page plus engageante." },
+    { id:'cont_alt',      cat:'Contenu',    pts:7,  ok:altOk,      jsDependent:true,
+      label:`Alt text > 50% des images (${altPct}%)`,
+      reco: "Ajoute des attributs alt descriptifs à tes images (SEO + accessibilité)." },
+    { id:'cont_int',      cat:'Contenu',    pts:5,  ok:intLinkOk,  jsDependent:true,
+      label:`Lien interne présent`,
+      reco: "Ajoute des liens internes vers d'autres pages pour renforcer ton maillage SEO." },
+    // Branding & Perception (20 pts)
+    { id:'brand_font',    cat:'Branding',   pts:5,  ok:fontOk,
+      label:`Police custom détectée`,
+      reco: "Intègre une police de marque via Google Fonts ou @font-face pour renforcer ton identité visuelle." },
+    { id:'brand_theme',   cat:'Branding',   pts:3,  ok:themeColorOk,
+      label:`Meta theme-color présent`,
+      reco: `Ajoute <meta name="theme-color" content="#COULEUR"> pour personnaliser la barre navigateur mobile.` },
+    { id:'brand_manifest',cat:'Branding',   pts:4,  ok:manifestOk,
+      label:`Manifest.json lié dans le head`,
+      reco: `Ajoute <link rel="manifest" href="/manifest.json"> pour activer les fonctionnalités PWA.` },
+    { id:'brand_colors',  cat:'Branding',   pts:4,  ok:fewColorsOk,     jsDependent:true,
+      label:`Cohérence couleurs inline (${inlineColors.size} détectées)`,
+      reco: "Moins de 5 couleurs inline — utilise des classes CSS plutôt que des styles en dur." },
+    { id:'brand_links',   cat:'Branding',   pts:4,  ok:noPlaceholderOk, jsDependent:true,
+      label:`Aucun lien vide href="#" détecté`,
+      reco: `${placeholderLinks.length} lien(s) placeholder détecté(s) — remplace les href="#" par de vraies URLs.` },
+  ];
+
+  // Appliquer le flag skip si JS-heavy
+  if (isJsHeavy) {
+    checks.forEach(c => { if (c.jsDependent) c.skip = true; });
+  }
+
+  // Totals — les critères skippés sont exclus du score
+  const cats = {
+    SEO:        { score:0, max:25, verifiableMax:0, checks:[] },
+    Conversion: { score:0, max:25, verifiableMax:0, checks:[] },
+    Technique:  { score:0, max:25, verifiableMax:0, checks:[] },
+    Contenu:    { score:0, max:25, verifiableMax:0, checks:[] },
+    Branding:   { score:0, max:20, verifiableMax:0, checks:[] },
+  };
+  let rawTotal = 0;
+  let rawMax   = 0;
+  checks.forEach(c => {
+    if (!c.skip) {
+      rawMax += c.pts;
+      cats[c.cat].verifiableMax += c.pts;
+      if (c.ok) { rawTotal += c.pts; cats[c.cat].score += c.pts; }
+    }
+    cats[c.cat].checks.push(c);
+  });
+
+  const verifiableCount = checks.filter(c => !c.skip).length;
+  const total  = rawMax > 0 ? Math.round(rawTotal / rawMax * 100) : 0;
+  const failed = checks.filter(c => !c.skip && !c.ok).sort((a,b) => b.pts - a.pts).slice(0, 3);
+  return { total, cats, failed, isJsHeavy, verifiableCount };
+}
+
+// ──────────────────────────────────────────────────────────────
+// Email capture
+// ──────────────────────────────────────────────────────────────
+function showEmailCapture(result, url) {
+  pendingResult = result;
+  pendingUrl    = url;
+  emailInput.value = '';
+  emailError.textContent = '';
+  emailSection.classList.add('visible');
+  setTimeout(() => emailInput.focus(), 50);
+}
+
+function hideEmailCapture() {
+  emailSection.classList.remove('visible');
+}
+
+async function submitEmail() {
+  const email = emailInput.value.trim();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    emailError.textContent = 'Saisis une adresse email valide.';
+    emailInput.style.borderColor = 'var(--red)';
+    setTimeout(() => { emailInput.style.borderColor = ''; }, 1200);
+    return;
+  }
+  emailError.textContent = '';
+  emailSubmitBtn.textContent = 'Envoi en cours…';
+  emailSubmitBtn.disabled = true;
+
+  // Fire-and-forget — on n'attend pas la réponse pour afficher les résultats
+  fetch('https://api.brevo.com/v3/contacts', {
+    method: 'POST',
+    headers: {
+      'api-key': BREVO_API_KEY,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify({
+      email,
+      listIds: [BREVO_LIST_ID],
+      attributes: {
+        URL_ANALYSEE: pendingUrl || '',
+        SCORE: pendingResult ? String(pendingResult.total) : '',
+        PRENOM: ''
+      },
+      updateEnabled: true
+    })
+  }).catch(() => {}); // Erreur silencieuse — ne bloque pas les résultats
+
+  emailSubmitBtn.textContent = 'Recevoir mon rapport →';
+  emailSubmitBtn.disabled = false;
+  hideEmailCapture();
+  renderResults(pendingResult, pendingUrl);
+}
+
+function skipEmail() {
+  hideEmailCapture();
+  renderResults(pendingResult, pendingUrl);
+}
+
+// ──────────────────────────────────────────────────────────────
+// Render
+// ──────────────────────────────────────────────────────────────
+function renderResults(res, url) {
+  resultsSection.classList.add('visible');
+  analyzedUrl.innerHTML = `Résultats pour <span>${esc(url)}</span>`;
+
+  const color = levelColor(res.total);
+  const label = levelLabel(res.total);
+
+  // JS warning banner
+  const jsWarning = $('jsWarning');
+  const scoreNote = $('scoreNote');
+  if (res.isJsHeavy) {
+    jsWarning.classList.add('visible');
+    scoreNote.textContent = `Score partiel — site JS détecté · ${res.verifiableCount} critères vérifiables`;
+    scoreNote.className = 'score-note partial';
+  } else {
+    jsWarning.classList.remove('visible');
+    scoreNote.textContent = `Score calculé sur ${res.verifiableCount} critères`;
+    scoreNote.className = 'score-note';
+  }
+
+  // Arc & counter
+  scoreArc.style.stroke = color;
+  scoreLevel.style.color = color;
+  scoreLevel.textContent = label;
+  scoreNum.style.color = color;
+
+  let count = 0;
+  const step = Math.max(1, Math.ceil(res.total / 45));
+  const ticker = setInterval(() => {
+    count = Math.min(count + step, res.total);
+    scoreNum.textContent = count;
+    if (count >= res.total) clearInterval(ticker);
+  }, 22);
+
+  setTimeout(() => {
+    const C = 439.82; // 2π×70
+    scoreArc.style.strokeDashoffset = C - (res.total / 100) * C;
+  }, 80);
+
+  // Category cards
+  catGrid.innerHTML = '';
+  ['SEO','Conversion','Technique','Contenu','Branding'].forEach(name => {
+    const cat = res.cats[name];
+    const denom = cat.verifiableMax > 0 ? cat.verifiableMax : cat.max;
+    const pct   = Math.round(cat.score / denom * 100);
+    const col   = levelColor(pct);
+
+    const crits = cat.checks.map(c => {
+      if (c.skip) return `
+        <div class="crit-row">
+          <em class="crit-icon skip">?</em>
+          <div><div class="crit-label" style="color:var(--muted)">${esc(c.label)}</div>
+          <div class="crit-reco">Non vérifiable sur ce site JS</div></div>
+        </div>`;
+      return `
+        <div class="crit-row">
+          <em class="crit-icon ${c.ok ? 'ok' : 'fail'}">${c.ok ? '✓' : '✗'}</em>
+          <div>
+            <div class="crit-label">${esc(c.label)}</div>
+            ${!c.ok ? `<div class="crit-reco">${esc(c.reco)}</div>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+
+    const card = document.createElement('div');
+    card.className = 'cat-card' + (name === 'Branding' ? ' full' : '');
+    card.innerHTML = `
+      <div class="cat-head">
+        <span class="cat-name">${esc(name === 'Branding' ? 'Branding & Perception' : name)}</span>
+        <span class="cat-pts" style="color:${col}">${cat.score}<span style="color:var(--muted);font-size:11px">/${denom}</span></span>
+      </div>
+      <div class="cat-bar-track">
+        <div class="cat-bar-fill" style="background:${col}" data-w="${pct}"></div>
+      </div>
+      <div class="criteria-list">${crits}</div>`;
+    catGrid.appendChild(card);
+  });
+
+  // Animate bars after paint
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    document.querySelectorAll('.cat-bar-fill[data-w]').forEach(el => {
+      el.style.width = el.dataset.w + '%';
+    });
+  }));
+
+  // Priorities
+  prioList.innerHTML = '';
+  if (res.failed.length === 0) {
+    prioList.innerHTML = `<p style="color:var(--green);font-size:14px;">Tous les critères majeurs sont validés !</p>`;
+  } else {
+    res.failed.forEach((item, i) => {
+      const el = document.createElement('div');
+      el.className = 'prio-item';
+      el.innerHTML = `
+        <div class="prio-num">${i + 1}</div>
+        <div>
+          <div class="prio-problem">${esc(item.label)}</div>
+          <div class="prio-action">${esc(item.reco)}</div>
+        </div>`;
+      prioList.appendChild(el);
+    });
+  }
+
+  // Scroll
+  setTimeout(() => {
+    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 120);
+}
+
+// ──────────────────────────────────────────────────────────────
+// Helpers
+// ──────────────────────────────────────────────────────────────
+function levelColor(s) {
+  if (s <= 40) return '#FF4D4D';
+  if (s <= 65) return '#EF9F27';
+  if (s <= 87) return '#6C63FF';
+  return '#00E5A0';
+}
+function levelLabel(s) {
+  if (s <= 40) return 'Site à refaire';
+  if (s <= 65) return "Axes d'amélioration importants";
+  if (s <= 87) return 'Bon site, quelques optimisations';
+  return 'Site bien optimisé';
+}
+
+function esc(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showError(msg) { errorBox.textContent = msg; errorBox.classList.add('visible'); }
+function hideError()    { errorBox.classList.remove('visible'); }
+
+function showLoading() {
+  inputSection.style.display = 'none';
+  loadingSection.classList.add('visible');
+  progressFill.style.width = '0%';
+}
+function hideLoading() { loadingSection.classList.remove('visible'); }
+function backToInput() { inputSection.style.display = ''; loadingSection.classList.remove('visible'); }
+
+function setMsg(txt, pct)   { loadingMsg.textContent = txt; setProgress(pct); }
+function fadeMsg(txt, pct)  {
+  loadingMsg.style.opacity = '0';
+  setTimeout(() => { loadingMsg.textContent = txt; loadingMsg.style.opacity = '1'; setProgress(pct); }, 230);
+}
+function setProgress(pct)   { progressFill.style.width = pct + '%'; }
+
+function reset() {
+  resultsSection.classList.remove('visible');
+  catGrid.innerHTML = '';
+  prioList.innerHTML = '';
+  scoreNum.textContent = '0';
+  scoreNum.style.color = '';
+  scoreArc.style.strokeDashoffset = '439.82';
+  scoreArc.style.stroke = 'var(--accent)';
+  scoreLevel.textContent = '';
+  $('scoreNote').textContent = '';
+  $('jsWarning').classList.remove('visible');
+  hideEmailCapture();
+  pendingResult = null;
+  pendingUrl    = null;
+  progressFill.style.width = '0%';
+  backToInput();
+  urlInput.value = '';
+  urlInput.focus();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>

@@ -36,13 +36,12 @@ app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use(cors({
-  origin: (origin, cb) => {
-    const allowed = ['https://liova.studio', 'http://localhost:3000', 'http://127.0.0.1:3000'];
-    if (!origin || allowed.some(o => origin.startsWith(o))) return cb(null, true);
-    cb(new Error('Not allowed by CORS'));
-  }
-}));
+const corsOptions = {
+  origin: true,
+  credentials: true
+};
+
+app.use(cors(corsOptions));
 
 const limiter = rateLimit({
   windowMs: 60 * 60 * 1000,

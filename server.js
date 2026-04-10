@@ -310,7 +310,12 @@ app.post('/api/analyze', async (req, res) => {
 
 // POST /api/contact
 app.post('/api/contact', async (req, res) => {
-  const { email, url, score, id } = req.body;
+  const {
+    email, url, score, id,
+    scoreSeo, scoreConversion, scoreTechnique, scoreContenu, scoreBranding,
+    priorite1, priorite2, priorite3
+  } = req.body;
+
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ error: 'Email invalide.' });
   }
@@ -328,9 +333,16 @@ app.post('/api/contact', async (req, res) => {
         email,
         listIds: [BREVO_LIST_ID],
         attributes: {
-          URL_ANALYSEE: url   || '',
-          SCORE:        String(score || ''),
-          PRENOM:       ''
+          URL_ANALYSEE:      url               || '',
+          SCORE:             String(score      || ''),
+          SCORE_SEO:         String(scoreSeo         || ''),
+          SCORE_CONVERSION:  String(scoreConversion  || ''),
+          SCORE_TECHNIQUE:   String(scoreTechnique   || ''),
+          SCORE_CONTENU:     String(scoreContenu     || ''),
+          SCORE_BRANDING:    String(scoreBranding    || ''),
+          PRIORITE_1:        priorite1 || '',
+          PRIORITE_2:        priorite2 || '',
+          PRIORITE_3:        priorite3 || ''
         },
         updateEnabled: true
       })
@@ -340,8 +352,7 @@ app.post('/api/contact', async (req, res) => {
   }
 
   // Update db.json
-  const db = readDb();
-  // Match by id if provided, otherwise by url + recent entry
+  const db  = readDb();
   const idx = id
     ? db.findIndex(e => e.id === id)
     : db.findLastIndex(e => e.url === url);

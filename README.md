@@ -67,6 +67,25 @@ liova-analyzer/
     └── index.html     # Frontend
 ```
 
+## Attributs Brevo à créer manuellement
+
+Dans Brevo → **Contacts → Attributs** → "Créer un attribut" (type Texte) :
+
+| Attribut | Type |
+|---|---|
+| `URL_ANALYSEE` | Texte |
+| `SCORE` | Texte |
+| `SCORE_SEO` | Texte |
+| `SCORE_CONVERSION` | Texte |
+| `SCORE_TECHNIQUE` | Texte |
+| `SCORE_CONTENU` | Texte |
+| `SCORE_BRANDING` | Texte |
+| `PRIORITE_1` | Texte |
+| `PRIORITE_2` | Texte |
+| `PRIORITE_3` | Texte |
+
+Ces attributs sont utilisés pour personnaliser l'email 1 de la séquence.
+
 ## Routes API
 
 | Route | Méthode | Description |

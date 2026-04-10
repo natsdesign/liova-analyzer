@@ -508,7 +508,23 @@ async function run() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Erreur serveur.');
 
-    pendingData = { id: data.id, score: data.score, url, isJsHeavy: data.isJsHeavy, verifiableCount: data.verifiableCount };
+    const cats = data.categories || {};
+    const prios = (data.priorites || []).map(p => p.reco || p.label || '');
+    pendingData = {
+      id:              data.id,
+      score:           data.score,
+      url,
+      isJsHeavy:       data.isJsHeavy,
+      verifiableCount: data.verifiableCount,
+      scoreSeo:        cats.SEO        ? cats.SEO.score        : 0,
+      scoreConversion: cats.Conversion ? cats.Conversion.score : 0,
+      scoreTechnique:  cats.Technique  ? cats.Technique.score  : 0,
+      scoreContenu:    cats.Contenu    ? cats.Contenu.score    : 0,
+      scoreBranding:   cats.Branding   ? cats.Branding.score   : 0,
+      priorite1:       prios[0] || '',
+      priorite2:       prios[1] || '',
+      priorite3:       prios[2] || ''
+    };
 
     setTimeout(() => {
       hideLoading();
@@ -551,9 +567,17 @@ async function submitEmail() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       email,
-      url:   pendingData.url,
-      score: pendingData.score,
-      id:    pendingData.id
+      url:             pendingData.url,
+      score:           pendingData.score,
+      id:              pendingData.id,
+      scoreSeo:        pendingData.scoreSeo,
+      scoreConversion: pendingData.scoreConversion,
+      scoreTechnique:  pendingData.scoreTechnique,
+      scoreContenu:    pendingData.scoreContenu,
+      scoreBranding:   pendingData.scoreBranding,
+      priorite1:       pendingData.priorite1,
+      priorite2:       pendingData.priorite2,
+      priorite3:       pendingData.priorite3
     })
   }).catch(() => {});
 

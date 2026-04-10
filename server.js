@@ -255,15 +255,17 @@ app.post('/api/analyze', async (req, res) => {
   if (!url) return res.status(400).json({ error: 'URL manquante.' });
   if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
 
-  // Fetch with timeout via AbortController
   const ctrl    = new AbortController();
   const timeout = setTimeout(() => ctrl.abort(), 8000);
 
-  let rawHtml = '';
   try {
     const response = await fetch(url, {
       signal: ctrl.signal,
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LiovaBot/1.0)' }
+      headers: {
+        'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept':          'text/html,application/xhtml+xml',
+        'Accept-Language': 'fr-FR,fr;q=0.9'
+      }
     });
     clearTimeout(timeout);
 
@@ -274,36 +276,37 @@ app.post('/api/analyze', async (req, res) => {
       throw new Error('Le site ne retourne pas du HTML');
     }
 
-    rawHtml = await response.text();
+    const rawHtml = await response.text();
+    const $       = cheerio.load(rawHtml);
+    const result  = analyse($, url, rawHtml);
+
+    const db    = readDb();
+    const entry = {
+      id:        Date.now(),
+      url,
+      score:     result.total,
+      date:      new Date().toISOString(),
+      email:     null,
+      isJsHeavy: result.isJsHeavy
+    };
+    db.push(entry);
+    writeDb(db);
+
+    return res.status(200).json({
+      id:              entry.id,
+      score:           result.total,
+      categories:      result.cats,
+      priorites:       result.priorites,
+      isJsHeavy:       result.isJsHeavy,
+      verifiableCount: result.verifiableCount
+    });
   } catch (err) {
     clearTimeout(timeout);
-    return res.status(200).json({ error: 'Site inaccessible ou bloque les analyses externes' });
+    return res.status(200).json({
+      score: 0,
+      error: 'Ce site est inaccessible ou bloque les analyses externes.'
+    });
   }
-
-  const $ = cheerio.load(rawHtml);
-  const result = analyse($, url, rawHtml);
-
-  // Persist to db.json
-  const db    = readDb();
-  const entry = {
-    id:    Date.now(),
-    url,
-    score: result.total,
-    date:  new Date().toISOString(),
-    email: null,
-    isJsHeavy: result.isJsHeavy
-  };
-  db.push(entry);
-  writeDb(db);
-
-  res.json({
-    id:               entry.id,
-    score:            result.total,
-    categories:       result.cats,
-    priorites:        result.priorites,
-    isJsHeavy:        result.isJsHeavy,
-    verifiableCount:  result.verifiableCount
-  });
 });
 
 // POST /api/contact

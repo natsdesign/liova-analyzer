@@ -32,7 +32,12 @@ function writeDb(data) {
 // ──────────────────────────────────────────────────────────────
 // Middleware
 // ──────────────────────────────────────────────────────────────
-app.use(helmet({ contentSecurityPolicy: false }));
+app.use(helmet({ frameguard: false, contentSecurityPolicy: false }));
+app.use((req, res, next) => {
+  res.removeHeader('X-Frame-Options');
+  res.setHeader('Content-Security-Policy', "frame-ancestors *");
+  next();
+});
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 

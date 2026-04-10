@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analyseur de Site — Liova Studio</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;500&display=swap');
+
+    :root {
+      --bg: #0A0A0F;
+      --bg-card: #111118;
+      --accent: #6C63FF;
+      --green: #00E5A0;
+      --red: #FF4D4D;
+      --orange: #EF9F27;
+      --text: #F0F0F5;
+      --muted: #8888AA;
+      --border: rgba(255,255,255,0.08);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #app {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 28px 16px 40px;
+    }
+
+    /* ── INPUT ── */
+    .input-section { display: flex; flex-direction: column; gap: 16px; }
+
+    .brand { text-align: center; margin-bottom: 4px; }
+    .brand-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: 22px;
+      color: var(--text);
+    }
+    .brand-title span { color: var(--accent); }
+    .brand-sub { font-size: 13px; color: var(--muted); margin-top: 6px; }
+
+    .form-label { font-size: 13px; font-weight: 500; color: var(--muted); margin-bottom: 8px; display: block; }
+
+    .url-input {
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .url-input:focus { border-color: var(--accent); }
+    .url-input::placeholder { color: var(--muted); }
+
+    .analyze-btn {
+      width: 100%;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 15px;
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      animation: pulse-glow 2.5s ease-in-out infinite;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(108,99,255,0.4); }
+      50%       { box-shadow: 0 0 22px 7px rgba(108,99,255,0.22); }
+    }
+    .analyze-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 28px rgba(108,99,255,0.5); animation: none; }
+    .analyze-btn:active { transform: translateY(0); }
+    .analyze-btn:disabled { opacity: 0.6; cursor: not-allowed; animation: none; }
+
+    .btn-sub { text-align: center; font-size: 12px; color: var(--muted); }
+
+    /* ── ERROR ── */
+    .error-box {
+      display: none;
+      background: rgba(255,77,77,0.08);
+      border: 1px solid rgba(255,77,77,0.28);
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-size: 13px;
+      color: var(--red);
+      text-align: center;
+      line-height: 1.5;
+    }
+    .error-box.visible { display: block; }
+
+    /* ── EXAMPLES ── */
+    .examples-hint {
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.7;
+    }
+    .examples-hint strong { display: block; margin-bottom: 5px; }
+    .example-pills { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 4px; }
+    .example-pill {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 4px 11px;
+      font-size: 11px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+    .example-pill:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── LOADING ── */
+    .loading-section {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      padding: 40px 0;
+    }
+    .loading-section.visible { display: flex; }
+
+    .loading-message {
+      font-family: 'Instrument Serif', serif;
+      font-size: 18px;
+      color: var(--text);
+      min-height: 28px;
+      transition: opacity 0.25s;
+    }
+
+    .progress-track {
+      width: 100%;
+      background: rgba(255,255,255,0.06);
+      border-radius: 999px;
+      height: 4px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 999px;
+      width: 0%;
+      transition: width 0.75s ease;
+    }
+
+    /* ── EMAIL CAPTURE ── */
+    .email-section {
+      display: none;
+      flex-direction: column;
+      gap: 14px;
+      padding: 8px 0;
+    }
+    .email-section.visible { display: flex; }
+
+    .email-card {
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .email-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: 20px;
+      color: var(--text);
+      text-align: center;
+      line-height: 1.3;
+    }
+    .email-sub {
+      font-size: 13px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.6;
+      margin-top: -4px;
+    }
+    .email-error {
+      font-size: 12px;
+      color: var(--red);
+      text-align: center;
+      min-height: 16px;
+    }
+    .skip-link {
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      transition: color 0.2s;
+    }
+    .skip-link:hover { color: var(--text); }
+
+    /* ── RESULTS ── */
+    .results-section { display: none; flex-direction: column; gap: 20px; }
+    .results-section.visible { display: flex; }
+
+    .analyzed-url {
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      word-break: break-all;
+    }
+    .analyzed-url span { color: var(--accent); }
+
+    /* Score circle */
+    .score-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .circle-container {
+      position: relative;
+      width: 164px;
+      height: 164px;
+    }
+    .circle-container svg { transform: rotate(-90deg); }
+    .circle-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .score-num {
+      font-family: 'Instrument Serif', serif;
+      font-size: 44px;
+      line-height: 1;
+    }
+    .score-denom { font-size: 13px; color: var(--muted); }
+    .score-level {
+      font-family: 'Instrument Serif', serif;
+      font-size: 14px;
+      text-align: center;
+    }
+    .score-note {
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+      margin-top: -4px;
+    }
+    .score-note.partial { color: var(--orange); }
+
+    /* JS Warning */
+    .js-warning {
+      display: none;
+      background: rgba(239,159,39,0.1);
+      border: 1px solid rgba(239,159,39,0.35);
+      border-radius: 12px;
+      padding: 13px 16px;
+      font-size: 13px;
+      color: var(--orange);
+      line-height: 1.55;
+      text-align: center;
+    }
+    .js-warning.visible { display: block; }
+
+    /* Confirmation box */
+    .confirm-card {
+      background: rgba(0,229,160,0.07);
+      border: 1px solid rgba(0,229,160,0.3);
+      border-radius: 14px;
+      padding: 24px;
+      text-align: center;
+    }
+    .confirm-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: 18px;
+      color: var(--green);
+      margin-bottom: 8px;
+    }
+    .confirm-sub { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+    /* CTA */
+    .cta-card {
+      border: 1px solid var(--accent);
+      border-radius: 14px;
+      padding: 24px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background: rgba(108,99,255,0.05);
+    }
+    .cta-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: 18px;
+    }
+    .cta-sub { font-size: 14px; color: var(--muted); line-height: 1.6; }
+    .cta-sub strong { color: var(--text); }
+    .cta-btn {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff;
+      text-decoration: none;
+      border-radius: 10px;
+      padding: 13px 28px;
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .cta-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(108,99,255,0.45); }
+
+    /* Reset */
+    .reset-btn {
+      width: 100%;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 13px;
+      color: var(--muted);
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .reset-btn:hover { border-color: var(--accent); color: var(--accent); }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ══ INPUT ══ -->
+  <div class="input-section" id="inputSection">
+    <div class="brand">
+      <div class="brand-title">Analyse ton site <span>gratuitement</span></div>
+      <div class="brand-sub">Score SEO · Conversion · Technique · Contenu · Branding en 15 s</div>
+    </div>
+
+    <div>
+      <label class="form-label" for="urlInput">Entre l'URL de ton site</label>
+      <input type="text" id="urlInput" class="url-input"
+        placeholder="https://tonstartup.fr"
+        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+    </div>
+
+    <button class="analyze-btn" id="analyzeBtn">Analyser →</button>
+    <p class="btn-sub">Gratuit · 15 secondes · Aucune inscription</p>
+    <div class="error-box" id="errorBox"></div>
+
+    <div class="examples-hint">
+      <strong>Fonctionne mieux sur les sites statiques (WordPress, Webflow, Framer, Wix)</strong>
+      <div class="example-pills">
+        <span class="example-pill" data-url="https://www.qonto.com">qonto.com</span>
+        <span class="example-pill" data-url="https://welovedevs.com">welovedevs.com</span>
+        <span class="example-pill" data-url="https://www.spendesk.com">spendesk.com</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ LOADING ══ -->
+  <div class="loading-section" id="loadingSection">
+    <div class="loading-message" id="loadingMsg">Récupération du site...</div>
+    <div class="progress-track" style="width:100%">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+  </div>
+
+  <!-- ══ EMAIL CAPTURE ══ -->
+  <div class="email-section" id="emailSection">
+    <div class="email-card">
+      <div class="email-title">Reçois ton rapport complet par email</div>
+      <div class="email-sub">On t'envoie aussi 3 conseils personnalisés basés sur ton score.</div>
+      <input type="email" id="emailInput" class="url-input"
+        placeholder="ton@email.com" autocomplete="email"/>
+      <div class="email-error" id="emailError"></div>
+      <button class="analyze-btn" id="emailSubmitBtn">Recevoir mon rapport →</button>
+      <span class="skip-link" id="skipEmailBtn">Non merci, voir les résultats sans email</span>
+    </div>
+  </div>
+
+  <!-- ══ RESULTS ══ -->
+  <div class="results-section" id="resultsSection">
+    <div class="analyzed-url" id="analyzedUrl"></div>
+
+    <div class="score-wrap">
+      <div class="circle-container">
+        <svg width="164" height="164" viewBox="0 0 164 164">
+          <circle cx="82" cy="82" r="70" fill="none"
+            stroke="rgba(255,255,255,0.06)" stroke-width="10"/>
+          <circle id="scoreArc" cx="82" cy="82" r="70" fill="none"
+            stroke="var(--accent)" stroke-width="10"
+            stroke-linecap="round"
+            stroke-dasharray="439.82"
+            stroke-dashoffset="439.82"
+            style="transition: stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1), stroke 0.4s ease;"/>
+        </svg>
+        <div class="circle-center">
+          <div class="score-num" id="scoreNum">0</div>
+          <div class="score-denom">/100</div>
+        </div>
+      </div>
+      <div class="score-level" id="scoreLevel"></div>
+      <div class="score-note" id="scoreNote"></div>
+    </div>
+
+    <div class="js-warning" id="jsWarning">
+      ⚠️ Ce site utilise un framework JavaScript (Next.js / React / Vue).
+      L'analyse porte sur le HTML initial — certains éléments dynamiques peuvent ne pas être détectés.
+    </div>
+
+    <!-- Confirmation email -->
+    <div class="confirm-card" id="confirmCard" style="display:none">
+      <div class="confirm-title">Rapport envoyé !</div>
+      <div class="confirm-sub">Vérifie ta boîte mail — tu devrais recevoir ton rapport et tes 3 conseils personnalisés dans quelques minutes.</div>
+    </div>
+
+    <div class="cta-card">
+      <div class="cta-title">Ton site a besoin d'un coup de boost ?</div>
+      <div class="cta-sub">
+        Liova Studio corrige tout ça en 14 jours —
+        <strong>2 500 € tout compris.</strong>
+      </div>
+      <a href="https://liova.studio" target="_blank" rel="noopener" class="cta-btn">
+        Voir le Launch Pack →
+      </a>
+    </div>
+
+    <button class="reset-btn" id="resetBtn">← Analyser un autre site</button>
+  </div>
+
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+const inputSection   = $('inputSection');
+const loadingSection = $('loadingSection');
+const emailSection   = $('emailSection');
+const resultsSection = $('resultsSection');
+const urlInput       = $('urlInput');
+const analyzeBtn     = $('analyzeBtn');
+const errorBox       = $('errorBox');
+const loadingMsg     = $('loadingMsg');
+const progressFill   = $('progressFill');
+const scoreArc       = $('scoreArc');
+const scoreNum       = $('scoreNum');
+const scoreLevel     = $('scoreLevel');
+const scoreNote      = $('scoreNote');
+const jsWarning      = $('jsWarning');
+const confirmCard    = $('confirmCard');
+const analyzedUrl    = $('analyzedUrl');
+const resetBtn       = $('resetBtn');
+const emailInput     = $('emailInput');
+const emailSubmitBtn = $('emailSubmitBtn');
+const skipEmailBtn   = $('skipEmailBtn');
+const emailError     = $('emailError');
+
+let pendingData = null; // { id, score, url, isJsHeavy, verifiableCount }
+
+// ── Events ──
+analyzeBtn.addEventListener('click', run);
+urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') run(); });
+resetBtn.addEventListener('click', reset);
+emailSubmitBtn.addEventListener('click', submitEmail);
+emailInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitEmail(); });
+skipEmailBtn.addEventListener('click', skipEmail);
+document.querySelectorAll('.example-pill').forEach(p =>
+  p.addEventListener('click', () => { urlInput.value = p.dataset.url; urlInput.focus(); })
+);
+
+// ── Run ──
+async function run() {
+  let url = urlInput.value.trim();
+  if (!url) { showError("Saisis l'URL de ton site pour commencer."); return; }
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+
+  hideError();
+  analyzeBtn.disabled = true;
+  showLoading();
+
+  const msgs = ['Récupération du site...','Analyse SEO...','Vérification de la conversion...','Calcul du score...'];
+  const steps = [12, 35, 62, 88];
+  let mi = 0;
+  setMsg(msgs[0], steps[0]);
+  const ticker = setInterval(() => {
+    mi = Math.min(mi + 1, msgs.length - 1);
+    fadeMsg(msgs[mi], steps[mi]);
+  }, 900);
+
+  try {
+    const res  = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+    clearInterval(ticker);
+    setProgress(100);
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur serveur.');
+
+    pendingData = { id: data.id, score: data.score, url, isJsHeavy: data.isJsHeavy, verifiableCount: data.verifiableCount };
+
+    setTimeout(() => {
+      hideLoading();
+      showEmailCapture();
+    }, 300);
+  } catch (err) {
+    clearInterval(ticker);
+    hideLoading();
+    backToInput();
+    showError(err.message || 'Service temporairement indisponible. Réessaie dans quelques instants.');
+  }
+}
+
+// ── Email capture ──
+function showEmailCapture() {
+  emailInput.value = '';
+  emailError.textContent = '';
+  emailSection.classList.add('visible');
+  setTimeout(() => emailInput.focus(), 50);
+}
+function hideEmailCapture() {
+  emailSection.classList.remove('visible');
+}
+
+async function submitEmail() {
+  const email = emailInput.value.trim();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    emailError.textContent = 'Saisis une adresse email valide.';
+    emailInput.style.borderColor = 'var(--red)';
+    setTimeout(() => { emailInput.style.borderColor = ''; }, 1200);
+    return;
+  }
+  emailError.textContent = '';
+  emailSubmitBtn.textContent = 'Envoi en cours…';
+  emailSubmitBtn.disabled = true;
+
+  // Fire-and-forget
+  fetch('/api/contact', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email,
+      url:   pendingData.url,
+      score: pendingData.score,
+      id:    pendingData.id
+    })
+  }).catch(() => {});
+
+  emailSubmitBtn.textContent = 'Recevoir mon rapport →';
+  emailSubmitBtn.disabled = false;
+  hideEmailCapture();
+  renderResults(true); // showConfirm = true
+}
+
+function skipEmail() {
+  hideEmailCapture();
+  renderResults(false);
+}
+
+// ── Render ──
+function renderResults(showConfirm) {
+  const { score, url, isJsHeavy, verifiableCount } = pendingData;
+
+  resultsSection.classList.add('visible');
+  analyzedUrl.innerHTML = `Résultats pour <span>${esc(url)}</span>`;
+
+  confirmCard.style.display = showConfirm ? 'block' : 'none';
+
+  const color = levelColor(score);
+  const label = levelLabel(score);
+
+  if (isJsHeavy) {
+    jsWarning.classList.add('visible');
+    scoreNote.textContent = `Score partiel — site JS détecté · ${verifiableCount} critères vérifiables`;
+    scoreNote.className = 'score-note partial';
+  } else {
+    jsWarning.classList.remove('visible');
+    scoreNote.textContent = `Score calculé sur ${verifiableCount} critères`;
+    scoreNote.className = 'score-note';
+  }
+
+  scoreArc.style.stroke = color;
+  scoreLevel.style.color = color;
+  scoreLevel.textContent = label;
+  scoreNum.style.color = color;
+
+  let count = 0;
+  const step = Math.max(1, Math.ceil(score / 45));
+  const t = setInterval(() => {
+    count = Math.min(count + step, score);
+    scoreNum.textContent = count;
+    if (count >= score) clearInterval(t);
+  }, 22);
+
+  setTimeout(() => {
+    const C = 439.82;
+    scoreArc.style.strokeDashoffset = C - (score / 100) * C;
+  }, 80);
+
+  setTimeout(() => {
+    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 120);
+}
+
+// ── Reset ──
+function reset() {
+  resultsSection.classList.remove('visible');
+  hideEmailCapture();
+  scoreNum.textContent = '0';
+  scoreNum.style.color = '';
+  scoreArc.style.strokeDashoffset = '439.82';
+  scoreArc.style.stroke = 'var(--accent)';
+  scoreLevel.textContent = '';
+  scoreNote.textContent = '';
+  jsWarning.classList.remove('visible');
+  confirmCard.style.display = 'none';
+  progressFill.style.width = '0%';
+  pendingData = null;
+  backToInput();
+  urlInput.value = '';
+  urlInput.focus();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Helpers ──
+function levelColor(s) {
+  if (s <= 40) return '#FF4D4D';
+  if (s <= 65) return '#EF9F27';
+  if (s <= 87) return '#6C63FF';
+  return '#00E5A0';
+}
+function levelLabel(s) {
+  if (s <= 40) return 'Site à refaire';
+  if (s <= 65) return "Axes d'amélioration importants";
+  if (s <= 87) return 'Bon site, quelques optimisations';
+  return 'Site bien optimisé';
+}
+function esc(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function showError(msg) { errorBox.textContent = msg; errorBox.classList.add('visible'); }
+function hideError()    { errorBox.classList.remove('visible'); }
+function showLoading()  { inputSection.style.display = 'none'; loadingSection.classList.add('visible'); progressFill.style.width = '0%'; }
+function hideLoading()  { loadingSection.classList.remove('visible'); }
+function backToInput()  { inputSection.style.display = ''; loadingSection.classList.remove('visible'); analyzeBtn.disabled = false; }
+function setMsg(t, p)   { loadingMsg.textContent = t; setProgress(p); }
+function fadeMsg(t, p)  { loadingMsg.style.opacity='0'; setTimeout(()=>{ loadingMsg.textContent=t; loadingMsg.style.opacity='1'; setProgress(p); },230); }
+function setProgress(p) { progressFill.style.width = p + '%'; }
+</script>
+</body>
+</html>

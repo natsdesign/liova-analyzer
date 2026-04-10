@@ -263,16 +263,21 @@ app.post('/api/analyze', async (req, res) => {
   try {
     const response = await fetch(url, {
       signal: ctrl.signal,
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LiovaAnalyzer/1.0)' }
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LiovaBot/1.0)' }
     });
     clearTimeout(timeout);
+
+    if (!response.ok) throw new Error('Site inaccessible');
+
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('text/html')) {
+      throw new Error('Le site ne retourne pas du HTML');
+    }
+
     rawHtml = await response.text();
   } catch (err) {
     clearTimeout(timeout);
-    const msg = err.name === 'AbortError'
-      ? 'Le site met trop longtemps à répondre.'
-      : 'Ce site est inaccessible ou bloque les analyses.';
-    return res.status(502).json({ error: msg });
+    return res.status(200).json({ error: 'Site inaccessible ou bloque les analyses externes' });
   }
 
   const $ = cheerio.load(rawHtml);

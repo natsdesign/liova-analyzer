@@ -247,14 +247,21 @@
     .score-denom { font-size: 13px; color: var(--muted); }
     .score-level {
       font-family: 'Instrument Serif', serif;
-      font-size: 14px;
+      font-size: 16px;
       text-align: center;
+    }
+    .score-sub {
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+      margin-top: -4px;
+      line-height: 1.5;
     }
     .score-note {
       font-size: 11px;
       color: var(--muted);
       text-align: center;
-      margin-top: -4px;
+      margin-top: -2px;
     }
     .score-note.partial { color: var(--orange); }
 
@@ -305,6 +312,11 @@
     }
     .cta-sub { font-size: 14px; color: var(--muted); line-height: 1.6; }
     .cta-sub strong { color: var(--text); }
+    .cta-btns {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
     .cta-btn {
       display: inline-block;
       background: var(--accent);
@@ -315,9 +327,16 @@
       font-family: 'Inter', sans-serif;
       font-size: 15px;
       font-weight: 500;
+      text-align: center;
       transition: transform 0.15s, box-shadow 0.15s;
     }
     .cta-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(108,99,255,0.45); }
+    .cta-btn-secondary {
+      background: transparent;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+    }
+    .cta-btn-secondary:hover { background: rgba(108,99,255,0.08); box-shadow: none; }
 
     /* Reset */
     .reset-btn {
@@ -341,27 +360,27 @@
   <!-- ══ INPUT ══ -->
   <div class="input-section" id="inputSection">
     <div class="brand">
-      <div class="brand-title">Analyse ton site <span>gratuitement</span></div>
-      <div class="brand-sub">Score SEO · Conversion · Technique · Contenu · Branding en 15 s</div>
+      <div class="brand-title">Ta landing page <span>convertit-elle vraiment ?</span></div>
+      <div class="brand-sub">Analyse gratuite · Score conversion, SEO, technique · Résultat en 15 s</div>
     </div>
 
     <div>
-      <label class="form-label" for="urlInput">Entre l'URL de ton site</label>
+      <label class="form-label" for="urlInput">Entre l'URL de ta landing page</label>
       <input type="text" id="urlInput" class="url-input"
         placeholder="https://tonstartup.fr"
         autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
     </div>
 
-    <button class="analyze-btn" id="analyzeBtn">Analyser →</button>
+    <button class="analyze-btn" id="analyzeBtn">Analyser ma page →</button>
     <p class="btn-sub">Gratuit · 15 secondes · Aucune inscription</p>
     <div class="error-box" id="errorBox"></div>
 
     <div class="examples-hint">
       <strong>Fonctionne mieux sur les sites statiques (WordPress, Webflow, Framer, Wix)</strong>
       <div class="example-pills">
-        <span class="example-pill" data-url="https://www.qonto.com">qonto.com</span>
-        <span class="example-pill" data-url="https://welovedevs.com">welovedevs.com</span>
-        <span class="example-pill" data-url="https://www.spendesk.com">spendesk.com</span>
+        <span class="example-pill" data-url="https://www.pennylane.com">pennylane.com</span>
+        <span class="example-pill" data-url="https://alan.com">alan.com</span>
+        <span class="example-pill" data-url="https://livestorm.co">livestorm.co</span>
       </div>
     </div>
   </div>
@@ -409,6 +428,7 @@
         </div>
       </div>
       <div class="score-level" id="scoreLevel"></div>
+      <div class="score-sub" id="scoreSub"></div>
       <div class="score-note" id="scoreNote"></div>
     </div>
 
@@ -424,14 +444,19 @@
     </div>
 
     <div class="cta-card">
-      <div class="cta-title">Ton site a besoin d'un coup de boost ?</div>
+      <div class="cta-title">Prêt à booster tes conversions ?</div>
       <div class="cta-sub">
-        Liova Studio corrige tout ça en 14 jours —
-        <strong>2 500 € tout compris.</strong>
+        Liova Studio transforme ta landing page en machine à convertir —
+        <strong>résultats garantis en 14 jours.</strong>
       </div>
-      <a href="https://liova.studio" target="_blank" rel="noopener" class="cta-btn">
-        Voir le Launch Pack →
-      </a>
+      <div class="cta-btns">
+        <a href="https://liova.studio" target="_blank" rel="noopener" class="cta-btn">
+          Voir les offres →
+        </a>
+        <a href="https://calendly.com/liova-studio" target="_blank" rel="noopener" class="cta-btn cta-btn-secondary">
+          Réserver un appel gratuit →
+        </a>
+      </div>
     </div>
 
     <button class="reset-btn" id="resetBtn">← Analyser un autre site</button>
@@ -454,6 +479,7 @@ const progressFill   = $('progressFill');
 const scoreArc       = $('scoreArc');
 const scoreNum       = $('scoreNum');
 const scoreLevel     = $('scoreLevel');
+const scoreSub       = $('scoreSub');
 const scoreNote      = $('scoreNote');
 const jsWarning      = $('jsWarning');
 const confirmCard    = $('confirmCard');
@@ -617,6 +643,7 @@ function renderResults(showConfirm) {
   scoreArc.style.stroke = color;
   scoreLevel.style.color = color;
   scoreLevel.textContent = label;
+  scoreSub.textContent = levelSubtitle(score);
   scoreNum.style.color = color;
 
   let count = 0;
@@ -646,6 +673,7 @@ function reset() {
   scoreArc.style.strokeDashoffset = '439.82';
   scoreArc.style.stroke = 'var(--accent)';
   scoreLevel.textContent = '';
+  scoreSub.textContent = '';
   scoreNote.textContent = '';
   jsWarning.classList.remove('visible');
   confirmCard.style.display = 'none';
@@ -668,7 +696,13 @@ function levelLabel(s) {
   if (s <= 40) return 'Site à refaire';
   if (s <= 65) return "Axes d'amélioration importants";
   if (s <= 87) return 'Bon site, quelques optimisations';
-  return 'Site bien optimisé';
+  return 'Landing page performante';
+}
+function levelSubtitle(s) {
+  if (s <= 40) return "Tes visiteurs partent sans convertir — il est temps d'agir.";
+  if (s <= 65) return "Des changements ciblés peuvent doubler tes conversions.";
+  if (s <= 87) return "Tu es sur la bonne voie — affine pour maximiser tes résultats.";
+  return "Ton site est optimisé pour convertir — bravo !";
 }
 function esc(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');

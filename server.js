@@ -97,21 +97,31 @@ function analyse($, url, rawHtml) {
   const vpOk = $('meta[name="viewport"]').length > 0;
 
   // ── Conversion ──
-  const ctaOk     = $('form').length > 0 || $('button').length > 0;
+  // CTA above fold : button ou form dans les 3000 premiers chars du body HTML
+  const bodyHtml = $('body').html() || '';
+  const ctaAboveFoldOk = /(<button|<form|<a[^>]+(btn|cta))/i.test(bodyHtml.slice(0, 3000));
+
+  // Proposition de valeur : H1 > 5 mots
+  const h1Text = $('h1').first().text().trim();
+  const valuePropOk = h1Text.split(/\s+/).filter(w => w.length > 0).length > 5;
+
+  // Social proof
+  const spWords = ['témoignage','temoignage','avis','clients','résultats','resultats','cas client','ils nous font confiance','testimonial','review'];
+  const spOk = spWords.some(w => bodyLow.includes(w));
+
+  // CTA focalisé : 1 formulaire OU (0 formulaire + < 3 boutons)
+  const formCount   = $('form').length;
+  const buttonCount = $('button, [role="button"]').length;
+  const focusedCtaOk = formCount === 1 || (formCount === 0 && buttonCount > 0 && buttonCount < 3);
+
+  // Urgency trigger
+  const urgencyWords = ["limité","limite","offre","places","aujourd'hui","maintenant","exclusif","dernier","dernière","derniere","urgent","expire"];
+  const urgencyOk = urgencyWords.some(w => bodyLow.includes(w));
+
+  // Coordonnées de contact
   const emailRx   = /[\w.+-]+@[\w-]+\.[a-z]{2,}/i;
   const telRx     = /(\+33|0)[1-9][\s.\-]?(\d{2}[\s.\-]?){3}\d{2}/;
   const contactOk = emailRx.test(bodyText) || telRx.test(bodyText);
-
-  const spWords = ['témoignage','temoignage','avis','confiance','clients','résultats','resultats','garantie','testimonial','review','trust','customer','recommand'];
-  const spOk = spWords.some(w => bodyLow.includes(w));
-
-  const faqOk = $('h2, h3').toArray().some(el => {
-    const t = $(el).text().toLowerCase();
-    return t.includes('faq') || t.includes('question') || t.includes('foire');
-  });
-
-  const urgencyWords = ["limité","limite","offre","places","aujourd'hui","maintenant","exclusif","dernier","dernière","derniere","urgent","expire"];
-  const urgencyOk = urgencyWords.some(w => bodyLow.includes(w));
 
   // ── Technique ──
   const httpsOk   = url.startsWith('https://');
@@ -166,11 +176,12 @@ function analyse($, url, rawHtml) {
     h1_missing:       "Aucun titre principal détecté — Google ne comprend pas le sujet de ta page",
     multiple_h1:      "Plusieurs titres principaux détectés — ça confond Google et dilue ton SEO",
     no_viewport:      "Ton site n'est pas optimisé mobile — tu perds la moitié de tes visiteurs",
-    no_cta:           "Aucun bouton d'action visible — tes visiteurs ne savent pas quoi faire sur ton site",
-    no_email:         "Aucune information de contact visible — tu perds la confiance des visiteurs",
-    no_social_proof:  "Aucune preuve sociale (témoignages, chiffres) — difficile de convaincre sans références",
-    no_faq:           "Pas de FAQ — tu rates des opportunités de répondre aux objections de tes visiteurs",
+    no_cta_above_fold:"Aucun bouton ou formulaire visible au-dessus de la fold — le visiteur ne sait pas comment agir en arrivant",
+    no_value_prop:    "Ton titre principal ne communique pas de proposition de valeur claire — le visiteur ne comprend pas ce que tu fais en 3 secondes",
+    no_social_proof:  "Aucune preuve sociale (témoignages, avis clients) — difficile de convaincre sans références",
+    no_focused_cta:   "Trop de boutons ou aucun — l'attention du visiteur est diluée, ce qui réduit le taux de conversion",
     no_urgency:       "Aucun élément d'urgence ou de rareté — rien ne pousse le visiteur à agir maintenant",
+    no_email:         "Aucune information de contact visible — tu perds la confiance des visiteurs",
     no_https:         "Ton site n'est pas sécurisé (pas de HTTPS) — Google le pénalise et les visiteurs fuient",
     no_og_title:      "Ton site n'est pas optimisé pour les réseaux sociaux — les partages sont mal affichés",
     no_og_image:      "Aucune image de partage configurée — tes liens partagés sur LinkedIn/Facebook sont vides",
@@ -186,70 +197,78 @@ function analyse($, url, rawHtml) {
   };
 
   const checks = [
-    { id:'seo_title',      cat:'SEO',        pts:10, ok:titleOk,
+    // ── SEO (20 pts) ──
+    { id:'seo_title',       cat:'SEO',        pts:8,  ok:titleOk,
       msgKey: titleLen===0 ? 'title_missing' : titleLen<30 ? 'title_short' : 'title_long',
       label:`Balise <title> (30–65 chars)` },
-    { id:'seo_desc',       cat:'SEO',        pts:8,  ok:descOk,
+    { id:'seo_desc',        cat:'SEO',        pts:6,  ok:descOk,
       msgKey: descLen===0 ? 'meta_missing' : descLen<120 ? 'meta_short' : 'meta_long',
       label:`Meta description (120–160 chars)` },
-    { id:'seo_h1',         cat:'SEO',        pts:4,  ok:h1Ok,   jsDependent:true,
+    { id:'seo_h1',          cat:'SEO',        pts:4,  ok:h1Ok,   jsDependent:true,
       msgKey: h1s.length===0 ? 'h1_missing' : 'multiple_h1',
       label:`Un seul <h1> présent` },
-    { id:'seo_vp',         cat:'SEO',        pts:3,  ok:vpOk,
+    { id:'seo_vp',          cat:'SEO',        pts:2,  ok:vpOk,
       msgKey: 'no_viewport',
       label:`Meta viewport présent` },
-    { id:'conv_cta',       cat:'Conversion', pts:4,  ok:ctaOk,     jsDependent:true,
-      msgKey: 'no_cta',
-      label:`Formulaire ou bouton CTA présent` },
-    { id:'conv_contact',   cat:'Conversion', pts:6,  ok:contactOk, jsDependent:true,
-      msgKey: 'no_email',
-      label:`Email ou téléphone visible` },
-    { id:'conv_social',    cat:'Conversion', pts:6,  ok:spOk,      jsDependent:true,
+    // ── Conversion (40 pts) ──
+    { id:'conv_above_fold', cat:'Conversion', pts:10, ok:ctaAboveFoldOk, jsDependent:true,
+      msgKey: 'no_cta_above_fold',
+      label:`CTA visible au-dessus de la fold` },
+    { id:'conv_value_prop', cat:'Conversion', pts:8,  ok:valuePropOk,    jsDependent:true,
+      msgKey: 'no_value_prop',
+      label:`Proposition de valeur H1 claire (> 5 mots)` },
+    { id:'conv_social',     cat:'Conversion', pts:8,  ok:spOk,           jsDependent:true,
       msgKey: 'no_social_proof',
       label:`Social proof détecté` },
-    { id:'conv_faq',       cat:'Conversion', pts:5,  ok:faqOk,     jsDependent:true,
-      msgKey: 'no_faq',
-      label:`Section FAQ présente` },
-    { id:'conv_urgency',   cat:'Conversion', pts:4,  ok:urgencyOk, jsDependent:true,
+    { id:'conv_focused_cta',cat:'Conversion', pts:6,  ok:focusedCtaOk,   jsDependent:true,
+      msgKey: 'no_focused_cta',
+      label:`CTA focalisé (1 formulaire ou peu de boutons)` },
+    { id:'conv_urgency',    cat:'Conversion', pts:5,  ok:urgencyOk,      jsDependent:true,
       msgKey: 'no_urgency',
       label:`Urgency trigger détecté` },
-    { id:'tech_https',     cat:'Technique',  pts:8,  ok:httpsOk,
+    { id:'conv_contact',    cat:'Conversion', pts:3,  ok:contactOk,      jsDependent:true,
+      msgKey: 'no_email',
+      label:`Email ou téléphone visible` },
+    // ── Technique (15 pts) ──
+    { id:'tech_https',      cat:'Technique',  pts:5,  ok:httpsOk,
       msgKey: 'no_https',
       label:`HTTPS activé` },
-    { id:'tech_ogt',       cat:'Technique',  pts:6,  ok:ogTitleOk,
+    { id:'tech_ogt',        cat:'Technique',  pts:4,  ok:ogTitleOk,
       msgKey: 'no_og_title',
       label:`Open Graph og:title présent` },
-    { id:'tech_ogi',       cat:'Technique',  pts:6,  ok:ogImageOk,
+    { id:'tech_ogi',        cat:'Technique',  pts:4,  ok:ogImageOk,
       msgKey: 'no_og_image',
       label:`Open Graph og:image présent` },
-    { id:'tech_fav',       cat:'Technique',  pts:5,  ok:faviconOk,
+    { id:'tech_fav',        cat:'Technique',  pts:2,  ok:faviconOk,
       msgKey: 'no_favicon',
       label:`Favicon présente` },
-    { id:'cont_words',     cat:'Contenu',    pts:8,  ok:wordsOk,   jsDependent:true,
+    // ── Contenu (15 pts) ──
+    { id:'cont_words',      cat:'Contenu',    pts:6,  ok:wordsOk,   jsDependent:true,
       msgKey: 'low_word_count',
       label:`Contenu > 300 mots (${wordCount} détectés)` },
-    { id:'cont_img',       cat:'Contenu',    pts:5,  ok:imgOk,     jsDependent:true,
+    { id:'cont_img',        cat:'Contenu',    pts:3,  ok:imgOk,     jsDependent:true,
       msgKey: 'no_images',
       label:`Au moins 1 image présente` },
-    { id:'cont_alt',       cat:'Contenu',    pts:7,  ok:altOk,     jsDependent:true,
+    { id:'cont_alt',        cat:'Contenu',    pts:4,  ok:altOk,     jsDependent:true,
       msgKey: 'low_alt_text',
       label:`Alt text > 50% des images (${altPct}%)` },
-    { id:'cont_int',       cat:'Contenu',    pts:5,  ok:intLinkOk, jsDependent:true,
+    { id:'cont_int',        cat:'Contenu',    pts:2,  ok:intLinkOk, jsDependent:true,
       msgKey: 'no_internal_links',
       label:`Lien interne présent` },
-    { id:'brand_font',     cat:'Branding',   pts:5,  ok:fontOk,
+    // ── Branding (10 pts) ──
+    { id:'brand_font',      cat:'Branding',   pts:4,  ok:fontOk,
       msgKey: 'no_custom_font',
       label:`Police custom détectée` },
-    { id:'brand_theme',    cat:'Branding',   pts:3,  ok:themeColorOk,
+    { id:'brand_theme',     cat:'Branding',   pts:2,  ok:themeColorOk,
       msgKey: 'no_theme_color',
       label:`Meta theme-color présent` },
-    { id:'brand_manifest', cat:'Branding',   pts:4,  ok:manifestOk,
+    { id:'brand_manifest',  cat:'Branding',   pts:2,  ok:manifestOk,
       msgKey: 'no_manifest',
       label:`Manifest.json lié dans le head` },
-    { id:'brand_colors',   cat:'Branding',   pts:4,  ok:fewColorsOk, jsDependent:true,
+    { id:'brand_colors',    cat:'Branding',   pts:1,  ok:fewColorsOk, jsDependent:true,
       msgKey: 'broken_links',
       label:`Cohérence couleurs inline (${inlineColors.size} détectées)` },
-    { id:'brand_links',    cat:'Branding',   pts:4,  ok:noPlaceholderOk, jsDependent:true,
+    { id:'brand_links',     cat:'Branding',   pts:1,  ok:noPlaceholderOk, jsDependent:true,
       msgKey: 'broken_links',
       label:`Aucun lien vide href="#" détecté` },
   ];
@@ -260,11 +279,11 @@ function analyse($, url, rawHtml) {
   if (isJsHeavy) checks.forEach(c => { if (c.jsDependent) c.skip = true; });
 
   const cats = {
-    SEO:        { score:0, max:25, verifiableMax:0, checks:[] },
-    Conversion: { score:0, max:25, verifiableMax:0, checks:[] },
-    Technique:  { score:0, max:25, verifiableMax:0, checks:[] },
-    Contenu:    { score:0, max:25, verifiableMax:0, checks:[] },
-    Branding:   { score:0, max:20, verifiableMax:0, checks:[] },
+    SEO:        { score:0, max:20, verifiableMax:0, checks:[] },
+    Conversion: { score:0, max:40, verifiableMax:0, checks:[] },
+    Technique:  { score:0, max:15, verifiableMax:0, checks:[] },
+    Contenu:    { score:0, max:15, verifiableMax:0, checks:[] },
+    Branding:   { score:0, max:10, verifiableMax:0, checks:[] },
   };
   let rawTotal = 0;
   let rawMax   = 0;

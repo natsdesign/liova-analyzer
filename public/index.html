@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Analyseur de Site — Liova Studio</title>
+  <title>Analyse de Landing Page — Liova Studio</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;500&display=swap');
 
@@ -29,9 +29,9 @@
     }
 
     #app {
-      max-width: 600px;
+      max-width: 560px;
       margin: 0 auto;
-      padding: 28px 16px 40px;
+      padding: 32px 16px 48px;
     }
 
     /* ── INPUT ── */
@@ -40,11 +40,12 @@
     .brand { text-align: center; margin-bottom: 4px; }
     .brand-title {
       font-family: 'Instrument Serif', serif;
-      font-size: 22px;
+      font-size: 24px;
+      line-height: 1.25;
       color: var(--text);
     }
     .brand-title span { color: var(--accent); }
-    .brand-sub { font-size: 13px; color: var(--muted); margin-top: 6px; }
+    .brand-sub { font-size: 13px; color: var(--muted); margin-top: 8px; line-height: 1.6; }
 
     .form-label { font-size: 13px; font-weight: 500; color: var(--muted); margin-bottom: 8px; display: block; }
 
@@ -81,7 +82,7 @@
       0%, 100% { box-shadow: 0 0 0 0 rgba(108,99,255,0.4); }
       50%       { box-shadow: 0 0 22px 7px rgba(108,99,255,0.22); }
     }
-    .analyze-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 28px rgba(108,99,255,0.5); animation: none; }
+    .analyze-btn:hover  { transform: translateY(-1px); box-shadow: 0 6px 28px rgba(108,99,255,0.5); animation: none; }
     .analyze-btn:active { transform: translateY(0); }
     .analyze-btn:disabled { opacity: 0.6; cursor: not-allowed; animation: none; }
 
@@ -102,12 +103,7 @@
     .error-box.visible { display: block; }
 
     /* ── EXAMPLES ── */
-    .examples-hint {
-      font-size: 11px;
-      color: var(--muted);
-      text-align: center;
-      line-height: 1.7;
-    }
+    .examples-hint { font-size: 11px; color: var(--muted); text-align: center; line-height: 1.7; }
     .examples-hint strong { display: block; margin-bottom: 5px; }
     .example-pills { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 4px; }
     .example-pill {
@@ -129,7 +125,7 @@
       flex-direction: column;
       align-items: center;
       gap: 20px;
-      padding: 40px 0;
+      padding: 48px 0;
     }
     .loading-section.visible { display: flex; }
 
@@ -156,17 +152,73 @@
       transition: width 0.75s ease;
     }
 
-    /* ── EMAIL CAPTURE ── */
-    .email-section {
-      display: none;
-      flex-direction: column;
-      gap: 14px;
-      padding: 8px 0;
-    }
-    .email-section.visible { display: flex; }
+    /* ── RESULTS ── */
+    .results-section { display: none; flex-direction: column; gap: 20px; }
+    .results-section.visible { display: flex; }
 
+    .analyzed-url {
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      word-break: break-all;
+    }
+    .analyzed-url span { color: var(--accent); }
+
+    /* Score circle */
+    .score-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .circle-container { position: relative; width: 164px; height: 164px; }
+    .circle-container svg { transform: rotate(-90deg); }
+    .circle-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .score-num   { font-family: 'Instrument Serif', serif; font-size: 44px; line-height: 1; }
+    .score-denom { font-size: 13px; color: var(--muted); }
+    .score-level {
+      font-family: 'Instrument Serif', serif;
+      font-size: 17px;
+      text-align: center;
+    }
+    .score-message {
+      font-size: 13px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.6;
+      max-width: 380px;
+      margin-top: -4px;
+    }
+    .score-note {
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+    }
+    .score-note.partial { color: var(--orange); }
+
+    /* JS Warning */
+    .js-warning {
+      display: none;
+      background: rgba(239,159,39,0.1);
+      border: 1px solid rgba(239,159,39,0.35);
+      border-radius: 12px;
+      padding: 13px 16px;
+      font-size: 13px;
+      color: var(--orange);
+      line-height: 1.55;
+      text-align: center;
+    }
+    .js-warning.visible { display: block; }
+
+    /* ── EMAIL CARD (intégré dans les résultats) ── */
     .email-card {
-      width: 100%;
       background: var(--bg-card);
       border: 1px solid var(--border);
       border-radius: 16px;
@@ -195,150 +247,40 @@
       text-align: center;
       min-height: 16px;
     }
-    .skip-link {
+    .email-mention {
       text-align: center;
-      font-size: 12px;
-      color: var(--muted);
-      cursor: pointer;
-      text-decoration: underline;
-      text-underline-offset: 3px;
-      transition: color 0.2s;
-    }
-    .skip-link:hover { color: var(--text); }
-
-    /* ── RESULTS ── */
-    .results-section { display: none; flex-direction: column; gap: 20px; }
-    .results-section.visible { display: flex; }
-
-    .analyzed-url {
-      text-align: center;
-      font-size: 12px;
-      color: var(--muted);
-      word-break: break-all;
-    }
-    .analyzed-url span { color: var(--accent); }
-
-    /* Score circle */
-    .score-wrap {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
-    }
-    .circle-container {
-      position: relative;
-      width: 164px;
-      height: 164px;
-    }
-    .circle-container svg { transform: rotate(-90deg); }
-    .circle-center {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
-    .score-num {
-      font-family: 'Instrument Serif', serif;
-      font-size: 44px;
-      line-height: 1;
-    }
-    .score-denom { font-size: 13px; color: var(--muted); }
-    .score-level {
-      font-family: 'Instrument Serif', serif;
-      font-size: 16px;
-      text-align: center;
-    }
-    .score-sub {
-      font-size: 12px;
-      color: var(--muted);
-      text-align: center;
-      margin-top: -4px;
-      line-height: 1.5;
-    }
-    .score-note {
       font-size: 11px;
       color: var(--muted);
-      text-align: center;
-      margin-top: -2px;
     }
-    .score-note.partial { color: var(--orange); }
 
-    /* JS Warning */
-    .js-warning {
-      display: none;
-      background: rgba(239,159,39,0.1);
-      border: 1px solid rgba(239,159,39,0.35);
-      border-radius: 12px;
-      padding: 13px 16px;
-      font-size: 13px;
-      color: var(--orange);
-      line-height: 1.55;
-      text-align: center;
-    }
-    .js-warning.visible { display: block; }
+    /* ── CONFIRMATION ── */
+    .confirm-section { display: none; flex-direction: column; gap: 20px; }
+    .confirm-section.visible { display: flex; }
 
-    /* Confirmation box */
     .confirm-card {
       background: rgba(0,229,160,0.07);
       border: 1px solid rgba(0,229,160,0.3);
-      border-radius: 14px;
-      padding: 24px;
+      border-radius: 16px;
+      padding: 32px 24px;
       text-align: center;
-    }
-    .confirm-title {
-      font-family: 'Instrument Serif', serif;
-      font-size: 18px;
-      color: var(--green);
-      margin-bottom: 8px;
-    }
-    .confirm-sub { font-size: 13px; color: var(--muted); line-height: 1.6; }
-
-    /* CTA */
-    .cta-card {
-      border: 1px solid var(--accent);
-      border-radius: 14px;
-      padding: 24px;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      background: rgba(108,99,255,0.05);
-    }
-    .cta-title {
-      font-family: 'Instrument Serif', serif;
-      font-size: 18px;
-    }
-    .cta-sub { font-size: 14px; color: var(--muted); line-height: 1.6; }
-    .cta-sub strong { color: var(--text); }
-    .cta-btns {
       display: flex;
       flex-direction: column;
       gap: 10px;
     }
-    .cta-btn {
-      display: inline-block;
-      background: var(--accent);
-      color: #fff;
-      text-decoration: none;
-      border-radius: 10px;
-      padding: 13px 28px;
-      font-family: 'Inter', sans-serif;
-      font-size: 15px;
-      font-weight: 500;
-      text-align: center;
-      transition: transform 0.15s, box-shadow 0.15s;
+    .confirm-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: 22px;
+      color: var(--green);
     }
-    .cta-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(108,99,255,0.45); }
-    .cta-btn-secondary {
-      background: transparent;
-      border: 1px solid var(--accent);
-      color: var(--accent);
+    .confirm-sub {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
     }
-    .cta-btn-secondary:hover { background: rgba(108,99,255,0.08); box-shadow: none; }
+    .confirm-sub a { color: var(--accent); text-decoration: none; }
+    .confirm-sub a:hover { text-decoration: underline; }
 
-    /* Reset */
+    /* ── RESET ── */
     .reset-btn {
       width: 100%;
       background: transparent;
@@ -371,7 +313,7 @@
         autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
     </div>
 
-    <button class="analyze-btn" id="analyzeBtn">Analyser ma page →</button>
+    <button class="analyze-btn" id="analyzeBtn">Analyser ma landing →</button>
     <p class="btn-sub">Gratuit · 15 secondes · Aucune inscription</p>
     <div class="error-box" id="errorBox"></div>
 
@@ -390,19 +332,6 @@
     <div class="loading-message" id="loadingMsg">Récupération du site...</div>
     <div class="progress-track" style="width:100%">
       <div class="progress-fill" id="progressFill"></div>
-    </div>
-  </div>
-
-  <!-- ══ EMAIL CAPTURE ══ -->
-  <div class="email-section" id="emailSection">
-    <div class="email-card">
-      <div class="email-title">Reçois ton rapport complet par email</div>
-      <div class="email-sub">On t'envoie aussi 3 conseils personnalisés basés sur ton score.</div>
-      <input type="email" id="emailInput" class="url-input"
-        placeholder="ton@email.com" autocomplete="email"/>
-      <div class="email-error" id="emailError"></div>
-      <button class="analyze-btn" id="emailSubmitBtn">Recevoir mon rapport →</button>
-      <span class="skip-link" id="skipEmailBtn">Non merci, voir les résultats sans email</span>
     </div>
   </div>
 
@@ -427,9 +356,9 @@
           <div class="score-denom">/100</div>
         </div>
       </div>
-      <div class="score-level" id="scoreLevel"></div>
-      <div class="score-sub" id="scoreSub"></div>
-      <div class="score-note" id="scoreNote"></div>
+      <div class="score-level"   id="scoreLevel"></div>
+      <div class="score-message" id="scoreMessage"></div>
+      <div class="score-note"    id="scoreNote"></div>
     </div>
 
     <div class="js-warning" id="jsWarning">
@@ -437,29 +366,31 @@
       L'analyse porte sur le HTML initial — certains éléments dynamiques peuvent ne pas être détectés.
     </div>
 
-    <!-- Confirmation email -->
-    <div class="confirm-card" id="confirmCard" style="display:none">
-      <div class="confirm-title">Rapport envoyé !</div>
-      <div class="confirm-sub">Vérifie ta boîte mail — tu devrais recevoir ton rapport et tes 3 conseils personnalisés dans quelques minutes.</div>
-    </div>
-
-    <div class="cta-card">
-      <div class="cta-title">Prêt à booster tes conversions ?</div>
-      <div class="cta-sub">
-        Liova Studio transforme ta landing page en machine à convertir —
-        <strong>résultats garantis en 14 jours.</strong>
+    <!-- Formulaire email intégré — obligatoire, pas de skip -->
+    <div class="email-card" id="emailCard">
+      <div class="email-title">Reçois ton audit complet par email</div>
+      <div class="email-sub">
+        Analyse IA détaillée + 3 actions concrètes pour booster ta conversion —
+        envoyé en moins de 2 minutes.
       </div>
-      <div class="cta-btns">
-        <a href="https://liova.studio" target="_blank" rel="noopener" class="cta-btn">
-          Voir les offres →
-        </a>
-        <a href="https://calendly.com/liova-studio" target="_blank" rel="noopener" class="cta-btn cta-btn-secondary">
-          Réserver un appel gratuit →
-        </a>
+      <input type="email" id="emailInput" class="url-input"
+        placeholder="ton@email.com" autocomplete="email"/>
+      <div class="email-error" id="emailError"></div>
+      <button class="analyze-btn" id="emailSubmitBtn">Recevoir mon audit →</button>
+      <p class="email-mention">Aucun spam · Désabonnement en 1 clic</p>
+    </div>
+  </div>
+
+  <!-- ══ CONFIRMATION ══ -->
+  <div class="confirm-section" id="confirmSection">
+    <div class="confirm-card">
+      <div class="confirm-title">C'est parti.</div>
+      <div class="confirm-sub">
+        Vérifie ta boîte dans 2 minutes.<br><br>
+        En attendant → <a href="https://liova.studio" target="_blank" rel="noopener">liova.studio</a>
       </div>
     </div>
-
-    <button class="reset-btn" id="resetBtn">← Analyser un autre site</button>
+    <button class="reset-btn" id="resetBtn">← Analyser une autre page</button>
   </div>
 
 </div>
@@ -469,8 +400,8 @@ const $ = id => document.getElementById(id);
 
 const inputSection   = $('inputSection');
 const loadingSection = $('loadingSection');
-const emailSection   = $('emailSection');
 const resultsSection = $('resultsSection');
+const confirmSection = $('confirmSection');
 const urlInput       = $('urlInput');
 const analyzeBtn     = $('analyzeBtn');
 const errorBox       = $('errorBox');
@@ -479,42 +410,40 @@ const progressFill   = $('progressFill');
 const scoreArc       = $('scoreArc');
 const scoreNum       = $('scoreNum');
 const scoreLevel     = $('scoreLevel');
-const scoreSub       = $('scoreSub');
+const scoreMessage   = $('scoreMessage');
 const scoreNote      = $('scoreNote');
 const jsWarning      = $('jsWarning');
-const confirmCard    = $('confirmCard');
 const analyzedUrl    = $('analyzedUrl');
-const resetBtn       = $('resetBtn');
+const emailCard      = $('emailCard');
 const emailInput     = $('emailInput');
 const emailSubmitBtn = $('emailSubmitBtn');
-const skipEmailBtn   = $('skipEmailBtn');
 const emailError     = $('emailError');
+const resetBtn       = $('resetBtn');
 
-let pendingData = null; // { id, score, url, isJsHeavy, verifiableCount }
+let pendingData = null;
 
-// ── Events ──
+// ── Events ──────────────────────────────────────────────────
 analyzeBtn.addEventListener('click', run);
 urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') run(); });
-resetBtn.addEventListener('click', reset);
 emailSubmitBtn.addEventListener('click', submitEmail);
 emailInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitEmail(); });
-skipEmailBtn.addEventListener('click', skipEmail);
+resetBtn.addEventListener('click', reset);
 document.querySelectorAll('.example-pill').forEach(p =>
   p.addEventListener('click', () => { urlInput.value = p.dataset.url; urlInput.focus(); })
 );
 
-// ── Run ──
+// ── Run analysis ─────────────────────────────────────────────
 async function run() {
   let url = urlInput.value.trim();
-  if (!url) { showError("Saisis l'URL de ton site pour commencer."); return; }
+  if (!url) { showError("Saisis l'URL de ta landing page pour commencer."); return; }
   if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
 
   hideError();
   analyzeBtn.disabled = true;
   showLoading();
 
-  const msgs = ['Récupération du site...','Analyse SEO...','Vérification de la conversion...','Calcul du score...'];
-  const steps = [12, 35, 62, 88];
+  const msgs  = ['Récupération du site...', 'Analyse du tunnel de conversion...', 'Vérification de la crédibilité...', 'Calcul du score...'];
+  const steps = [12, 38, 65, 88];
   let mi = 0;
   setMsg(msgs[0], steps[0]);
   const ticker = setInterval(() => {
@@ -533,28 +462,22 @@ async function run() {
 
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Erreur serveur.');
+    if (data.error) throw new Error(data.error);
 
-    const cats = data.categories || {};
-    const prios = (data.priorites || []).map(p => p.reco || p.label || '');
     pendingData = {
       id:              data.id,
       score:           data.score,
       url,
       isJsHeavy:       data.isJsHeavy,
       verifiableCount: data.verifiableCount,
-      scoreSeo:        cats.SEO        ? cats.SEO.score        : 0,
-      scoreConversion: cats.Conversion ? cats.Conversion.score : 0,
-      scoreTechnique:  cats.Technique  ? cats.Technique.score  : 0,
-      scoreContenu:    cats.Contenu    ? cats.Contenu.score    : 0,
-      scoreBranding:   cats.Branding   ? cats.Branding.score   : 0,
-      priorite1:       prios[0] || '',
-      priorite2:       prios[1] || '',
-      priorite3:       prios[2] || ''
+      scores:          data.scores   || {},
+      details:         data.details  || {},
+      htmlContent:     data.htmlContent || ''
     };
 
     setTimeout(() => {
       hideLoading();
-      showEmailCapture();
+      showResults();
     }, 300);
   } catch (err) {
     clearInterval(ticker);
@@ -564,71 +487,13 @@ async function run() {
   }
 }
 
-// ── Email capture ──
-function showEmailCapture() {
-  emailInput.value = '';
-  emailError.textContent = '';
-  emailSection.classList.add('visible');
-  setTimeout(() => emailInput.focus(), 50);
-}
-function hideEmailCapture() {
-  emailSection.classList.remove('visible');
-}
-
-async function submitEmail() {
-  const email = emailInput.value.trim();
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    emailError.textContent = 'Saisis une adresse email valide.';
-    emailInput.style.borderColor = 'var(--red)';
-    setTimeout(() => { emailInput.style.borderColor = ''; }, 1200);
-    return;
-  }
-  emailError.textContent = '';
-  emailSubmitBtn.textContent = 'Envoi en cours…';
-  emailSubmitBtn.disabled = true;
-
-  // Fire-and-forget
-  fetch('/api/contact', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      email,
-      url:             pendingData.url,
-      score:           pendingData.score,
-      id:              pendingData.id,
-      scoreSeo:        pendingData.scoreSeo,
-      scoreConversion: pendingData.scoreConversion,
-      scoreTechnique:  pendingData.scoreTechnique,
-      scoreContenu:    pendingData.scoreContenu,
-      scoreBranding:   pendingData.scoreBranding,
-      priorite1:       pendingData.priorite1,
-      priorite2:       pendingData.priorite2,
-      priorite3:       pendingData.priorite3
-    })
-  }).catch(() => {});
-
-  emailSubmitBtn.textContent = 'Recevoir mon rapport →';
-  emailSubmitBtn.disabled = false;
-  hideEmailCapture();
-  renderResults(true); // showConfirm = true
-}
-
-function skipEmail() {
-  hideEmailCapture();
-  renderResults(false);
-}
-
-// ── Render ──
-function renderResults(showConfirm) {
+// ── Show results ─────────────────────────────────────────────
+function showResults() {
   const { score, url, isJsHeavy, verifiableCount } = pendingData;
+  const cfg = levelConfig(score);
 
   resultsSection.classList.add('visible');
   analyzedUrl.innerHTML = `Résultats pour <span>${esc(url)}</span>`;
-
-  confirmCard.style.display = showConfirm ? 'block' : 'none';
-
-  const color = levelColor(score);
-  const label = levelLabel(score);
 
   if (isJsHeavy) {
     jsWarning.classList.add('visible');
@@ -640,12 +505,13 @@ function renderResults(showConfirm) {
     scoreNote.className = 'score-note';
   }
 
-  scoreArc.style.stroke = color;
-  scoreLevel.style.color = color;
-  scoreLevel.textContent = label;
-  scoreSub.textContent = levelSubtitle(score);
-  scoreNum.style.color = color;
+  scoreArc.style.stroke   = cfg.color;
+  scoreLevel.style.color  = cfg.color;
+  scoreNum.style.color    = cfg.color;
+  scoreLevel.textContent  = cfg.label;
+  scoreMessage.textContent = cfg.message;
 
+  // Animate counter
   let count = 0;
   const step = Math.max(1, Math.ceil(score / 45));
   const t = setInterval(() => {
@@ -662,21 +528,60 @@ function renderResults(showConfirm) {
   setTimeout(() => {
     resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, 120);
+
+  // Focus email input
+  setTimeout(() => { emailInput.value = ''; emailInput.focus(); }, 600);
 }
 
-// ── Reset ──
+// ── Submit email ─────────────────────────────────────────────
+async function submitEmail() {
+  const email = emailInput.value.trim();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    emailError.textContent = 'Saisis une adresse email valide.';
+    emailInput.style.borderColor = 'var(--red)';
+    setTimeout(() => { emailInput.style.borderColor = ''; }, 1200);
+    return;
+  }
+  emailError.textContent = '';
+  emailSubmitBtn.textContent = 'Analyse en cours…';
+  emailSubmitBtn.disabled = true;
+
+  // Fire-and-forget — on ne bloque pas l'UX pour l'appel IA (jusqu'à 15 s)
+  fetch('/api/analyze-ai', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email,
+      url:         pendingData.url,
+      score:       pendingData.score,
+      id:          pendingData.id,
+      scores:      pendingData.scores,
+      details:     pendingData.details,
+      htmlContent: pendingData.htmlContent
+    })
+  }).catch(() => {});
+
+  // Afficher la confirmation immédiatement
+  resultsSection.classList.remove('visible');
+  confirmSection.classList.add('visible');
+  confirmSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── Reset ─────────────────────────────────────────────────────
 function reset() {
   resultsSection.classList.remove('visible');
-  hideEmailCapture();
-  scoreNum.textContent = '0';
-  scoreNum.style.color = '';
+  confirmSection.classList.remove('visible');
+  scoreNum.textContent  = '0';
+  scoreNum.style.color  = '';
   scoreArc.style.strokeDashoffset = '439.82';
   scoreArc.style.stroke = 'var(--accent)';
-  scoreLevel.textContent = '';
-  scoreSub.textContent = '';
-  scoreNote.textContent = '';
+  scoreLevel.textContent   = '';
+  scoreMessage.textContent = '';
+  scoreNote.textContent    = '';
   jsWarning.classList.remove('visible');
-  confirmCard.style.display = 'none';
+  emailCard.style.display = '';
+  emailSubmitBtn.textContent = 'Recevoir mon audit →';
+  emailSubmitBtn.disabled = false;
   progressFill.style.width = '0%';
   pendingData = null;
   backToInput();
@@ -685,25 +590,35 @@ function reset() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ── Helpers ──
-function levelColor(s) {
-  if (s <= 40) return '#FF4D4D';
-  if (s <= 65) return '#EF9F27';
-  if (s <= 87) return '#6C63FF';
-  return '#00E5A0';
+// ── Helpers ───────────────────────────────────────────────────
+function levelConfig(s) {
+  if (s <= 39) return {
+    label:   'Landing page à reconstruire',
+    message: 'Ton trafic arrive et repart. Chaque visiteur est de l\'argent perdu.',
+    color:   '#FF4D4D'
+  };
+  if (s <= 59) return {
+    label:   'Potentiel sous-exploité',
+    message: 'Ta landing existe mais ne convertit pas. Tu laisses des leads sur la table chaque jour.',
+    color:   '#EF9F27'
+  };
+  if (s <= 74) return {
+    label:   'Bonne base, optimisations critiques',
+    message: 'Quelques points bloquants empêchent ta landing d\'atteindre son vrai potentiel.',
+    color:   '#6C63FF'
+  };
+  if (s <= 89) return {
+    label:   'Landing solide',
+    message: 'Ta page convertit correctement. Des ajustements peuvent encore l\'améliorer.',
+    color:   '#00E5A0'
+  };
+  return {
+    label:   'Landing très bien optimisée',
+    message: 'Excellent travail. Focus sur le trafic maintenant.',
+    color:   '#00E5A0'
+  };
 }
-function levelLabel(s) {
-  if (s <= 40) return 'Site à refaire';
-  if (s <= 65) return "Axes d'amélioration importants";
-  if (s <= 87) return 'Bon site, quelques optimisations';
-  return 'Landing page performante';
-}
-function levelSubtitle(s) {
-  if (s <= 40) return "Tes visiteurs partent sans convertir — il est temps d'agir.";
-  if (s <= 65) return "Des changements ciblés peuvent doubler tes conversions.";
-  if (s <= 87) return "Tu es sur la bonne voie — affine pour maximiser tes résultats.";
-  return "Ton site est optimisé pour convertir — bravo !";
-}
+
 function esc(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }

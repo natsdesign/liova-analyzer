@@ -402,7 +402,7 @@ Génère UNIQUEMENT ce JSON, rien d'autre :
         'content-type':      'application/json'
       },
       body: JSON.stringify({
-        model:      'claude-sonnet-4-5',
+        model:      'claude-sonnet-4-5-20250929',
         max_tokens: 1000,
         system:     'Tu es un expert en conversion de landing pages pour agences et startups. Tu analyses des landing pages et fournis des recommandations concrètes, directes et actionnables. Tu tutoies toujours. Tu ne fais jamais de compliments génériques. Tes recommandations sont précises et basées sur les données fournies. Tu réponds UNIQUEMENT en JSON.',
         messages:   [{ role: 'user', content: userPrompt }]
@@ -410,15 +410,21 @@ Génère UNIQUEMENT ce JSON, rien d'autre :
     });
     clearTimeout(aiTimeout);
 
-    if (aiRes.ok) {
-      const aiData  = await aiRes.json();
-      const rawText = aiData.content?.[0]?.text || '';
+    const anthropicData = await aiRes.json();
+    console.log('=== ANTHROPIC RESPONSE ===');
+    console.log('status:', aiRes.status);
+    console.log('data:', JSON.stringify(anthropicData));
+
+    if (!aiRes.ok) {
+      console.error('Anthropic error:', anthropicData);
+    } else {
+      const rawText = anthropicData.content?.[0]?.text || '';
       const match   = rawText.match(/\{[\s\S]*\}/);
       if (match) aiResult = JSON.parse(match[0]);
     }
-  } catch {
+  } catch (err) {
     clearTimeout(aiTimeout);
-    // Fallback silencieux — on envoie quand même à Brevo sans données IA
+    console.error('Anthropic fetch error:', err.message);
   }
 
   // ── Envoi Brevo ──────────────────────────────────────────────

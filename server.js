@@ -595,6 +595,444 @@ app.get('/api/dashboard', requireAdmin, (req, res) => {
 });
 
 // ──────────────────────────────────────────────────────────────
+// GET /audit — page d'audit interne (admin uniquement)
+// ──────────────────────────────────────────────────────────────
+app.get('/audit', async (req, res) => {
+  const { key, url: rawUrl } = req.query;
+  if (key !== ADMIN_KEY) return res.status(403).send('Accès refusé');
+  if (!rawUrl)           return res.status(400).send('URL manquante');
+
+  const url = /^https?:\/\//i.test(rawUrl) ? rawUrl : 'https://' + rawUrl;
+
+  // ── 1. Fetch + analyse ───────────────────────────────────────
+  let scoreData = null;
+  let rawHtml   = '';
+  try {
+    const ctrl    = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 10000);
+    const resp    = await fetch(url, {
+      signal: ctrl.signal,
+      headers: {
+        'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept':          'text/html,application/xhtml+xml',
+        'Accept-Language': 'fr-FR,fr;q=0.9'
+      }
+    });
+    clearTimeout(timeout);
+    if (!resp.ok || !(resp.headers.get('content-type') || '').includes('text/html')) {
+      throw new Error('Site inaccessible ou ne retourne pas du HTML');
+    }
+    rawHtml   = await resp.text();
+    const $   = cheerio.load(rawHtml);
+    scoreData = analyse($, url, rawHtml);
+  } catch (fetchErr) {
+    const errHtml = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+<title>Audit — Erreur</title>
+<style>body{font-family:sans-serif;background:#0A0A0F;color:#F0F0F5;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
+.box{text-align:center;max-width:400px}.title{font-size:22px;margin-bottom:12px;color:#FF4D4D}
+.sub{font-size:14px;color:#8888AA;line-height:1.6}</style></head>
+<body><div class="box">
+<div class="title">Site inaccessible</div>
+<div class="sub">Ce site est inaccessible ou bloque les analyses externes.<br><br><code style="color:#6C63FF">${url}</code><br><br>${fetchErr.message}</div>
+</div></body></html>`;
+    return res.status(200).send(errHtml);
+  }
+
+  // ── 2. Appel Anthropic ───────────────────────────────────────
+  const sc = {
+    tunnel:       scoreData.catDefs.tunnel.score,
+    offre:        scoreData.catDefs.offre.score,
+    confiance:    scoreData.catDefs.confiance.score,
+    branding:     scoreData.catDefs.branding.score,
+    architecture: scoreData.catDefs.architecture.score,
+  };
+
+  const criteriaLabels = {
+    tunnel_cta_fold:'CTA au-dessus de la fold', tunnel_single_obj:'Navigation simplifiée',
+    tunnel_strong_cta:'≥2 CTA avec verbe fort', tunnel_no_distract:'Peu de liens externes',
+    offre_h1:'H1 orienté bénéfice', offre_subtitle:'Sous-titre présent',
+    offre_price:'Prix visible', offre_explain:'Section d\'explication',
+    trust_social:'Preuve sociale', trust_human:'Élément humain',
+    trust_faq:'FAQ présente', trust_guarantee:'Garantie/engagement',
+    brand_font:'Police custom', brand_colors:'Cohérence couleurs',
+    brand_favicon:'Favicon', brand_https:'HTTPS',
+    arch_title:'Title présent', arch_meta:'Meta description', arch_h1:'Un seul H1',
+  };
+  const failedCriteria = Object.entries(scoreData.details)
+    .filter(([, ok]) => !ok)
+    .map(([id]) => `- ${criteriaLabels[id] || id}`)
+    .join('\n');
+
+  const userPrompt =
+`Analyse cette landing page et génère un rapport de conversion.
+
+URL : ${url}
+Score global : ${scoreData.total}/100
+Scores par catégorie :
+- Clarté du tunnel : ${sc.tunnel}/25
+- Clarté de l'offre : ${sc.offre}/25
+- Confiance & Crédibilité : ${sc.confiance}/25
+- Branding & Cohérence : ${sc.branding}/15
+- Architecture de base : ${sc.architecture}/10
+
+Critères échoués :
+${failedCriteria || 'Aucun'}
+
+Extrait du HTML de la page (premiers 3000 chars) :
+${rawHtml.slice(0, 3000)}
+
+Génère UNIQUEMENT ce JSON, rien d'autre :
+{
+  "diagnostic": "Une phrase percutante qui résume le vrai problème de cette landing en termes business (pas technique). Max 25 mots.",
+  "priorite_1": {"titre": "Titre court (5 mots max)", "explication": "Pourquoi ce problème coûte des leads. 2 phrases.", "action": "Action concrète cette semaine. Commence par un verbe."},
+  "priorite_2": {"titre": "...", "explication": "...", "action": "..."},
+  "priorite_3": {"titre": "...", "explication": "...", "action": "..."},
+  "point_fort": "Un vrai point positif. Honnête. 1 phrase.",
+  "conclusion": "Message de closing émotionnel. 2 phrases max."
+}`;
+
+  let aiResult = null;
+  let aiError  = false;
+  const aiCtrl    = new AbortController();
+  const aiTimeout = setTimeout(() => aiCtrl.abort(), 30000);
+  try {
+    const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      signal: aiCtrl.signal,
+      headers: {
+        'x-api-key':         ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'content-type':      'application/json'
+      },
+      body: JSON.stringify({
+        model:      'claude-sonnet-4-5-20250929',
+        max_tokens: 1000,
+        system:     'Tu es un expert en conversion de landing pages. Tu réponds UNIQUEMENT en JSON valide.',
+        messages:   [{ role: 'user', content: userPrompt }]
+      })
+    });
+    clearTimeout(aiTimeout);
+    if (aiRes.ok) {
+      const aiData  = await aiRes.json();
+      const rawText = aiData.content?.[0]?.text || '';
+      const match   = rawText.match(/\{[\s\S]*\}/);
+      if (match) aiResult = JSON.parse(match[0]);
+    }
+  } catch {
+    clearTimeout(aiTimeout);
+    aiError = true;
+  }
+
+  // ── 3. Helpers HTML ──────────────────────────────────────────
+  const levelColor = s => s <= 39 ? '#FF4D4D' : s <= 59 ? '#EF9F27' : s <= 74 ? '#6C63FF' : '#00E5A0';
+  const levelLabel = s => s <= 39 ? 'Landing page à reconstruire'
+                        : s <= 59 ? 'Potentiel sous-exploité'
+                        : s <= 74 ? 'Bonne base, optimisations critiques'
+                        : s <= 89 ? 'Landing solide'
+                        : 'Landing très bien optimisée';
+
+  const score      = scoreData.total;
+  const color      = levelColor(score);
+  const C          = 439.82;
+  const dashOffset = C - (score / 100) * C;
+  const now        = new Date().toLocaleString('fr-FR', { dateStyle:'full', timeStyle:'short' });
+
+  const escHtml = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+  // Category bars
+  const catBars = [
+    { label:'Clarté du tunnel',   score:sc.tunnel,       max:25 },
+    { label:'Clarté de l\'offre', score:sc.offre,        max:25 },
+    { label:'Confiance',          score:sc.confiance,    max:25 },
+    { label:'Branding',           score:sc.branding,     max:15 },
+    { label:'Architecture',       score:sc.architecture, max:10 },
+  ].map(({ label, score: s, max }) => {
+    const pct = Math.round(s / max * 100);
+    const c   = levelColor(pct);
+    return `<div class="bar-row">
+      <div class="bar-label">${label}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${c}"></div></div>
+      <div class="bar-val" style="color:${c}">${s}/${max}</div>
+    </div>`;
+  }).join('');
+
+  // Criteria table
+  const catOrder = ['tunnel','offre','confiance','branding','architecture'];
+  const catNames = { tunnel:'Clarté du tunnel', offre:'Clarté de l\'offre',
+                     confiance:'Confiance & Crédibilité', branding:'Branding & Cohérence',
+                     architecture:'Architecture de base' };
+  const checksByCat = {};
+  catOrder.forEach(c => { checksByCat[c] = []; });
+
+  // Rebuild checks list to get pts info
+  const allChecks = [
+    { id:'tunnel_cta_fold',    cat:'tunnel',       pts:8  }, { id:'tunnel_single_obj',  cat:'tunnel',       pts:6 },
+    { id:'tunnel_strong_cta',  cat:'tunnel',       pts:6  }, { id:'tunnel_no_distract', cat:'tunnel',       pts:5 },
+    { id:'offre_h1',           cat:'offre',        pts:8  }, { id:'offre_subtitle',     cat:'offre',        pts:6 },
+    { id:'offre_price',        cat:'offre',        pts:6  }, { id:'offre_explain',      cat:'offre',        pts:5 },
+    { id:'trust_social',       cat:'confiance',    pts:8  }, { id:'trust_human',        cat:'confiance',    pts:6 },
+    { id:'trust_faq',          cat:'confiance',    pts:6  }, { id:'trust_guarantee',    cat:'confiance',    pts:5 },
+    { id:'brand_font',         cat:'branding',     pts:5  }, { id:'brand_colors',       cat:'branding',     pts:5 },
+    { id:'brand_favicon',      cat:'branding',     pts:2  }, { id:'brand_https',        cat:'branding',     pts:3 },
+    { id:'arch_title',         cat:'architecture', pts:4  }, { id:'arch_meta',          cat:'architecture', pts:3 },
+    { id:'arch_h1',            cat:'architecture', pts:3  },
+  ];
+  allChecks.forEach(c => { checksByCat[c.cat].push(c); });
+
+  const criteriaTable = catOrder.map(cat => {
+    const rows = checksByCat[cat].map(c => {
+      const ok  = scoreData.details[c.id];
+      const pts = ok ? c.pts : 0;
+      const icon = ok
+        ? `<span style="color:#00E5A0;font-size:16px">✓</span>`
+        : `<span style="color:#FF4D4D;font-size:16px">✗</span>`;
+      return `<tr>
+        <td style="padding:10px 16px;font-size:13px;color:${ok?'#F0F0F5':'#8888AA'};border-bottom:1px solid rgba(255,255,255,0.04)">${criteriaLabels[c.id] || c.id}</td>
+        <td style="padding:10px 16px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.04)">${icon}</td>
+        <td style="padding:10px 16px;text-align:right;font-size:13px;color:${ok?'#00E5A0':'#FF4D4D'};border-bottom:1px solid rgba(255,255,255,0.04)">${pts}/${c.pts}</td>
+      </tr>`;
+    }).join('');
+    return `<tr><td colspan="3" style="padding:12px 16px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#6C63FF;background:rgba(108,99,255,0.08);border-bottom:1px solid rgba(255,255,255,0.06)">${catNames[cat]}</td></tr>${rows}`;
+  }).join('');
+
+  // AI section
+  const aiSection = aiError || !aiResult
+    ? `<div class="ai-unavailable">Analyse IA indisponible — réessayer dans quelques secondes.</div>`
+    : `<div class="diagnostic">${escHtml(aiResult.diagnostic)}</div>
+       ${['priorite_1','priorite_2','priorite_3'].map((k,i) => aiResult[k] ? `
+       <div class="priority">
+         <div class="priority-title">PRIORITÉ ${i+1} — ${escHtml(aiResult[k].titre)}</div>
+         <div class="priority-exp">${escHtml(aiResult[k].explication)}</div>
+         <div class="priority-action">→ Action : ${escHtml(aiResult[k].action)}</div>
+       </div>` : '').join('')}
+       <div class="point-fort">★ ${escHtml(aiResult.point_fort)}</div>
+       <div class="conclusion">${escHtml(aiResult.conclusion)}</div>`;
+
+  // Prospection texts
+  const p1titre  = aiResult?.priorite_1?.titre  || '';
+  const p1action = aiResult?.priorite_1?.action || '';
+  const p2titre  = aiResult?.priorite_2?.titre  || '';
+  const p2action = aiResult?.priorite_2?.action || '';
+  const p3titre  = aiResult?.priorite_3?.titre  || '';
+  const p3action = aiResult?.priorite_3?.action || '';
+
+  const linkedinMsg = `Salut,
+
+J'ai analysé ta landing ${url} — score de ${score}/100.
+
+${p1titre} — c'est probablement le point qui te coûte le plus de leads en ce moment.
+
+Je construis des systèmes de conversion pour les startups qui font des ads — landing page + lead magnet ou VSL + séquence email. 14 jours.
+
+Tu as 20 min cette semaine ?
+
+Nathan — Liova Studio`;
+
+  const emailMsg = `Objet : J'ai analysé ${url} — ${score}/100
+
+Bonjour,
+
+J'ai analysé votre landing page ${url} — score de ${score}/100.
+
+Les 3 points qui limitent votre conversion en ce moment :
+
+1. ${p1titre} : ${p1action}
+2. ${p2titre} : ${p2action}
+3. ${p3titre} : ${p3action}
+
+${aiResult?.point_fort || ''}
+
+Je construis des systèmes de conversion complets (landing + lead magnet + séquence email) en 14 jours pour 2 500 €.
+
+Si vous voulez qu'on regarde ça ensemble :
+→ liova.studio
+
+Nathan Brunet
+Fondateur — Liova Studio`;
+
+  // ── 4. Render HTML ───────────────────────────────────────────
+  const html = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audit — ${escHtml(url)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'DM Sans',sans-serif;background:#0A0A0F;color:#F0F0F5;padding:32px 20px 60px;-webkit-font-smoothing:antialiased}
+  a{color:#6C63FF;text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:800px;margin:0 auto;display:flex;flex-direction:column;gap:32px}
+
+  /* Header */
+  .header{display:flex;flex-direction:column;gap:6px;padding-bottom:24px;border-bottom:1px solid rgba(255,255,255,0.08)}
+  .header-badge{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#6C63FF;font-family:'Syne',sans-serif}
+  .header-url{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;word-break:break-all}
+  .header-date{font-size:12px;color:#8888AA}
+
+  /* Cards */
+  .card{background:#111118;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:28px}
+  .card-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:#8888AA;margin-bottom:20px}
+
+  /* Score */
+  .score-wrap{display:flex;flex-direction:column;align-items:center;gap:14px}
+  .circle-container{position:relative;width:180px;height:180px}
+  .circle-container svg{transform:rotate(-90deg)}
+  .circle-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .score-num{font-family:'Syne',sans-serif;font-size:52px;font-weight:700;line-height:1}
+  .score-denom{font-size:14px;color:#8888AA}
+  .score-label{font-family:'Syne',sans-serif;font-size:15px;font-weight:600;text-align:center}
+  .score-diagnostic{font-size:17px;font-style:italic;color:#9D97FF;text-align:center;line-height:1.5;max-width:580px}
+
+  /* Bars */
+  .bar-row{display:grid;grid-template-columns:180px 1fr 56px;align-items:center;gap:12px;margin-bottom:10px}
+  .bar-label{font-size:13px;color:#F0F0F5}
+  .bar-track{height:6px;background:rgba(255,255,255,0.06);border-radius:999px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:999px;transition:width .8s ease}
+  .bar-val{font-size:13px;font-weight:500;text-align:right}
+
+  /* AI */
+  .ai-card{border-color:#6C63FF;background:rgba(108,99,255,0.04)}
+  .diagnostic{font-size:18px;font-style:italic;color:#9D97FF;line-height:1.6;margin-bottom:24px;padding-bottom:24px;border-bottom:1px solid rgba(255,255,255,0.08)}
+  .priority{margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid rgba(255,255,255,0.06)}
+  .priority:last-of-type{border-bottom:none}
+  .priority-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#F0F0F5;margin-bottom:6px}
+  .priority-exp{font-size:13px;color:#8888AA;line-height:1.6;margin-bottom:8px}
+  .priority-action{font-size:13px;color:#00E5A0;font-weight:500}
+  .point-fort{font-size:14px;color:#00E5A0;margin-top:20px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.08)}
+  .conclusion{font-size:14px;font-style:italic;color:#F0F0F5;line-height:1.6;margin-top:14px}
+  .ai-unavailable{font-size:14px;color:#EF9F27;font-style:italic}
+
+  /* Buttons */
+  .btn-row{display:flex;gap:12px;flex-wrap:wrap}
+  .btn{padding:11px 20px;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:opacity .15s}
+  .btn:hover{opacity:.85}
+  .btn-primary{background:#6C63FF;color:#fff;border:none}
+  .btn-outline{background:transparent;border:1px solid #6C63FF;color:#6C63FF}
+  .btn-ghost{background:transparent;border:1px solid #444;color:#8888AA}
+  .copy-feedback{font-size:12px;color:#00E5A0;margin-left:8px;opacity:0;transition:opacity .3s}
+  .copy-feedback.show{opacity:1}
+
+  /* Table */
+  table{width:100%;border-collapse:collapse}
+  th{text-align:left;padding:10px 16px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#8888AA;border-bottom:1px solid rgba(255,255,255,0.06)}
+
+  /* Footer */
+  .footer{text-align:center;font-size:12px;color:#444;padding-top:8px}
+
+  @media(max-width:600px){.bar-row{grid-template-columns:120px 1fr 44px}.btn-row{flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-badge">Liova Studio — Audit Interne</div>
+    <div class="header-url"><a href="${escHtml(url)}" target="_blank" rel="noopener">${escHtml(url)}</a></div>
+    <div class="header-date">${now}</div>
+  </div>
+
+  <!-- Score -->
+  <div class="card">
+    <div class="card-title">Score global</div>
+    <div class="score-wrap">
+      <div class="circle-container">
+        <svg width="180" height="180" viewBox="0 0 180 180">
+          <circle cx="90" cy="90" r="76" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="10"/>
+          <circle cx="90" cy="90" r="76" fill="none"
+            stroke="${color}" stroke-width="10" stroke-linecap="round"
+            stroke-dasharray="477.52"
+            stroke-dashoffset="${477.52 - (score / 100) * 477.52}"
+            id="scoreArc"/>
+        </svg>
+        <div class="circle-center">
+          <div class="score-num" style="color:${color}" id="scoreNum">0</div>
+          <div class="score-denom">/100</div>
+        </div>
+      </div>
+      <div class="score-label" style="color:${color}">${levelLabel(score)}</div>
+      ${aiResult?.diagnostic ? `<div class="score-diagnostic">${escHtml(aiResult.diagnostic)}</div>` : ''}
+    </div>
+  </div>
+
+  <!-- Catégories -->
+  <div class="card">
+    <div class="card-title">Scores par catégorie</div>
+    ${catBars}
+  </div>
+
+  <!-- Analyse IA -->
+  <div class="card ai-card">
+    <div class="card-title">Analyse IA</div>
+    ${aiSection}
+  </div>
+
+  <!-- Actions de prospection -->
+  <div class="card">
+    <div class="card-title">Actions de prospection</div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="copyText('linkedin')">Copier message LinkedIn</button>
+      <span class="copy-feedback" id="fb-linkedin">Copié ✓</span>
+      <button class="btn btn-outline" onclick="copyText('email')">Copier message email</button>
+      <span class="copy-feedback" id="fb-email">Copié ✓</span>
+      <button class="btn btn-ghost" onclick="window.open('${escHtml(url)}','_blank')">Ouvrir le site</button>
+    </div>
+  </div>
+
+  <!-- Détail critères -->
+  <div class="card">
+    <div class="card-title">Détail des critères</div>
+    <table>
+      <thead><tr><th>Critère</th><th style="text-align:center">Résultat</th><th style="text-align:right">Points</th></tr></thead>
+      <tbody>${criteriaTable}</tbody>
+    </table>
+  </div>
+
+  <div class="footer">Liova Studio — Outil interne · Ne pas partager</div>
+</div>
+
+<script>
+const LINKEDIN_MSG = ${JSON.stringify(linkedinMsg)};
+const EMAIL_MSG    = ${JSON.stringify(emailMsg)};
+
+function copyText(type) {
+  const text = type === 'linkedin' ? LINKEDIN_MSG : EMAIL_MSG;
+  navigator.clipboard.writeText(text).then(() => {
+    const fb = document.getElementById('fb-' + type);
+    fb.classList.add('show');
+    setTimeout(() => fb.classList.remove('show'), 2000);
+  });
+}
+
+// Animate score counter
+(function() {
+  const el   = document.getElementById('scoreNum');
+  const arc  = document.getElementById('scoreArc');
+  const target = ${score};
+  const C    = 477.52;
+  arc.style.strokeDashoffset = C; // start at 0
+  let count = 0;
+  const step = Math.max(1, Math.ceil(target / 50));
+  const t = setInterval(() => {
+    count = Math.min(count + step, target);
+    el.textContent = count;
+    if (count >= target) clearInterval(t);
+  }, 20);
+  setTimeout(() => {
+    arc.style.transition = 'stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)';
+    arc.style.strokeDashoffset = C - (target / 100) * C;
+  }, 50);
+})();
+</script>
+</body>
+</html>`;
+
+  res.send(html);
+});
+
+// ──────────────────────────────────────────────────────────────
 // Start
 // ──────────────────────────────────────────────────────────────
 app.listen(PORT, () => {

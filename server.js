@@ -51,6 +51,8 @@ app.use((_req, res, next) => {
 
 app.use(cors({ origin: true, credentials: true }));
 
+app.set('trust proxy', 1);
+
 const limiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 10,
@@ -419,8 +421,16 @@ Génère UNIQUEMENT ce JSON, rien d'autre :
   const p2 = aiResult?.priorite_2 ? `${aiResult.priorite_2.titre} : ${aiResult.priorite_2.action}` : '';
   const p3 = aiResult?.priorite_3 ? `${aiResult.priorite_3.titre} : ${aiResult.priorite_3.action}` : '';
 
+  const listId = score < 50 ? 7 : score <= 75 ? 8 : 9;
+  console.log('=== BREVO PAYLOAD ===');
+  console.log('email:', email);
+  console.log('score:', score);
+  console.log('listId:', listId);
+  console.log('aiResult:', JSON.stringify(aiResult));
+  console.log('scores:', JSON.stringify(scores));
+
   try {
-    await fetch('https://api.brevo.com/v3/contacts', {
+    const brevoResponse = await fetch('https://api.brevo.com/v3/contacts', {
       method: 'POST',
       headers: {
         'api-key':      BREVO_API_KEY,
@@ -429,7 +439,7 @@ Génère UNIQUEMENT ce JSON, rien d'autre :
       },
       body: JSON.stringify({
         email,
-        listIds: [score < 50 ? 7 : score <= 75 ? 8 : 9],
+        listIds: [listId],
         attributes: {
           URL_ANALYSEE:       url                                                                    || '',
           SCORE:              parseInt(score)                                                        || 0,
@@ -449,8 +459,12 @@ Génère UNIQUEMENT ce JSON, rien d'autre :
         updateEnabled: true
       })
     });
-  } catch {
-    // Silently fail
+    console.log('=== BREVO RESPONSE ===');
+    console.log('status:', brevoResponse.status);
+    const brevoBody = await brevoResponse.text();
+    console.log('body:', brevoBody);
+  } catch (err) {
+    console.log('=== BREVO ERROR ===', err.message);
   }
 
   // ── Mise à jour db.json ──────────────────────────────────────

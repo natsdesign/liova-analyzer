@@ -18,6 +18,9 @@ const ADMIN_KEY         = process.env.ADMIN_KEY         || 'admin';
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
 const DB_PATH           = path.join(__dirname, 'db.json');
 
+// Cache du dernier HTML analysé — fallback si le frontend ne renvoie pas htmlContent
+let lastHtmlContent = '';
+
 // ──────────────────────────────────────────────────────────────
 // DB helpers
 // ──────────────────────────────────────────────────────────────
@@ -265,6 +268,7 @@ app.post('/api/analyze', async (req, res) => {
     }
 
     const rawHtml = await response.text();
+    lastHtmlContent = rawHtml.slice(0, 5000);
     const $       = cheerio.load(rawHtml);
     const result  = analyse($, url, rawHtml);
 
@@ -307,7 +311,8 @@ app.post('/api/analyze', async (req, res) => {
 // POST /api/analyze-ai
 // Appelé après soumission email. Fait appel à l'API Anthropic puis envoie à Brevo.
 app.post('/api/analyze-ai', async (req, res) => {
-  const { email, url, score, scores, details, htmlContent, id } = req.body;
+  const { email, url, score, scores, details, id } = req.body;
+  const htmlContent = req.body.htmlContent || lastHtmlContent;
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ error: 'Email invalide.' });
@@ -397,7 +402,7 @@ Génère UNIQUEMENT ce JSON, rien d'autre :
         'content-type':      'application/json'
       },
       body: JSON.stringify({
-        model:      'claude-sonnet-4-20250514',
+        model:      'claude-sonnet-4-5',
         max_tokens: 1000,
         system:     'Tu es un expert en conversion de landing pages pour agences et startups. Tu analyses des landing pages et fournis des recommandations concrètes, directes et actionnables. Tu tutoies toujours. Tu ne fais jamais de compliments génériques. Tes recommandations sont précises et basées sur les données fournies. Tu réponds UNIQUEMENT en JSON.',
         messages:   [{ role: 'user', content: userPrompt }]

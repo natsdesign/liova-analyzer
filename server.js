@@ -390,8 +390,9 @@ Génère UNIQUEMENT ce JSON, rien d'autre :
   // ── Appel Anthropic ──────────────────────────────────────────
   let aiResult = null;
   const ctrl      = new AbortController();
-  const aiTimeout = setTimeout(() => ctrl.abort(), 15000);
+  const aiTimeout = setTimeout(() => ctrl.abort(), 30000); // 30s
 
+  console.log('Anthropic call started:', new Date().toISOString());
   try {
     const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -409,6 +410,7 @@ Génère UNIQUEMENT ce JSON, rien d'autre :
       })
     });
     clearTimeout(aiTimeout);
+    console.log('Anthropic call ended:', new Date().toISOString());
 
     const anthropicData = await aiRes.json();
     console.log('=== ANTHROPIC RESPONSE ===');
@@ -425,6 +427,7 @@ Génère UNIQUEMENT ce JSON, rien d'autre :
   } catch (err) {
     clearTimeout(aiTimeout);
     console.error('Anthropic fetch error:', err.message);
+    console.log('Anthropic call ended (error):', new Date().toISOString());
   }
 
   // ── Envoi Brevo ──────────────────────────────────────────────

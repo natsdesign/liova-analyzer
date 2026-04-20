@@ -4,9 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Analyse de Landing Page — Liova Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;500&display=swap');
-
     :root {
       --bg: #0A0A0F;
       --bg-card: #111118;
@@ -22,47 +23,114 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: 'Inter', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       background: var(--bg);
       color: var(--text);
       -webkit-font-smoothing: antialiased;
     }
 
-    #app {
-      max-width: 560px;
-      margin: 0 auto;
-      padding: 32px 16px 48px;
+    /* ── HERO ─────────────────────────────────────── */
+    #heroSection {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px 60px;
+      overflow: hidden;
     }
 
-    /* ── INPUT ── */
-    .input-section { display: flex; flex-direction: column; gap: 16px; }
+    #particleCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
 
-    .brand { text-align: center; margin-bottom: 4px; }
-    .brand-title {
-      font-family: 'Instrument Serif', serif;
-      font-size: 24px;
-      line-height: 1.25;
+    .hero-inner {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 540px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .hero-h1 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 36px;
+      line-height: 1.2;
+      text-align: center;
       color: var(--text);
     }
-    .brand-title span { color: var(--accent); }
-    .brand-sub { font-size: 13px; color: var(--muted); margin-top: 8px; line-height: 1.6; }
+    @media (max-width: 768px) { .hero-h1 { font-size: 26px; } }
 
-    .form-label { font-size: 13px; font-weight: 500; color: var(--muted); margin-bottom: 8px; display: block; }
+    .hero-h1 .word {
+      display: inline-block;
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.45s ease, transform 0.45s ease;
+    }
+    .hero-h1 .word.in { opacity: 1; transform: translateY(0); }
+    .hero-h1 .accent { color: var(--accent); }
+
+    .hero-sub {
+      font-size: 16px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.65;
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.45s ease, transform 0.45s ease;
+    }
+    .hero-sub.in { opacity: 1; transform: translateY(0); }
+
+    .url-wrap {
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.45s ease, transform 0.45s ease;
+    }
+    .url-wrap.in { opacity: 1; transform: translateY(0); }
 
     .url-input {
       width: 100%;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.03);
+      border: 0.5px solid rgba(255,255,255,0.1);
       border-radius: 12px;
       padding: 14px 16px;
       color: var(--text);
-      font-family: 'Inter', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 15px;
       outline: none;
-      transition: border-color 0.2s;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
-    .url-input:focus { border-color: var(--accent); }
+    .url-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(108,99,255,0.15);
+    }
     .url-input::placeholder { color: var(--muted); }
+    .url-input.shake { animation: shake 0.4s ease; }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%      { transform: translateX(-6px); }
+      40%      { transform: translateX(6px); }
+      60%      { transform: translateX(-4px); }
+      80%      { transform: translateX(4px); }
+    }
+
+    .btn-wrap {
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.45s ease, transform 0.45s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .btn-wrap.in { opacity: 1; transform: translateY(0); }
 
     .analyze-btn {
       width: 100%;
@@ -71,7 +139,7 @@
       border: none;
       border-radius: 12px;
       padding: 15px;
-      font-family: 'Inter', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 16px;
       font-weight: 500;
       cursor: pointer;
@@ -79,8 +147,8 @@
       transition: transform 0.15s, box-shadow 0.15s;
     }
     @keyframes pulse-glow {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(108,99,255,0.4); }
-      50%       { box-shadow: 0 0 22px 7px rgba(108,99,255,0.22); }
+      0%,100% { box-shadow: 0 0 0 0 rgba(108,99,255,0.4); }
+      50%      { box-shadow: 0 0 22px 7px rgba(108,99,255,0.22); }
     }
     .analyze-btn:hover  { transform: translateY(-1px); box-shadow: 0 6px 28px rgba(108,99,255,0.5); animation: none; }
     .analyze-btn:active { transform: translateY(0); }
@@ -88,13 +156,12 @@
 
     .btn-sub { text-align: center; font-size: 12px; color: var(--muted); }
 
-    /* ── ERROR ── */
     .error-box {
       display: none;
       background: rgba(255,77,77,0.08);
       border: 1px solid rgba(255,77,77,0.28);
       border-radius: 10px;
-      padding: 14px 16px;
+      padding: 12px 16px;
       font-size: 13px;
       color: var(--red);
       text-align: center;
@@ -102,78 +169,123 @@
     }
     .error-box.visible { display: block; }
 
-    /* ── EXAMPLES ── */
-    .examples-hint { font-size: 11px; color: var(--muted); text-align: center; line-height: 1.7; }
-    .examples-hint strong { display: block; margin-bottom: 5px; }
-    .example-pills { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 4px; }
+    .pills-wrap {
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.45s ease, transform 0.45s ease;
+      text-align: center;
+    }
+    .pills-wrap.in { opacity: 1; transform: translateY(0); }
+
+    .pills-hint { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+    .example-pills { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
     .example-pill {
-      background: rgba(255,255,255,0.05);
+      background: rgba(255,255,255,0.04);
       border: 1px solid var(--border);
       border-radius: 999px;
-      padding: 4px 11px;
+      padding: 4px 12px;
       font-size: 11px;
       color: var(--muted);
       cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
       transition: border-color 0.2s, color 0.2s;
-      font-family: 'Inter', sans-serif;
     }
     .example-pill:hover { border-color: var(--accent); color: var(--accent); }
 
-    /* ── LOADING ── */
-    .loading-section {
+    /* ── SCAN ─────────────────────────────────────── */
+    #scanSection {
       display: none;
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
       flex-direction: column;
       align-items: center;
-      gap: 20px;
-      padding: 48px 0;
+      justify-content: center;
+      gap: 32px;
+      z-index: 200;
     }
-    .loading-section.visible { display: flex; }
+    #scanSection.visible { display: flex; }
 
-    .loading-message {
-      font-family: 'Instrument Serif', serif;
+    .scan-spinner {
+      width: 64px;
+      height: 64px;
+      animation: spin 1.1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .scan-msg {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
       font-size: 18px;
       color: var(--text);
       min-height: 28px;
-      transition: opacity 0.25s;
+      text-align: center;
+      padding: 0 24px;
+      transition: opacity 0.25s ease;
     }
 
-    .progress-track {
-      width: 100%;
+    .scan-bar {
+      width: 60%;
+      height: 2px;
       background: rgba(255,255,255,0.06);
       border-radius: 999px;
-      height: 4px;
       overflow: hidden;
+      position: relative;
     }
-    .progress-fill {
-      height: 100%;
-      background: var(--accent);
+    .scan-bar-fill {
+      position: absolute;
+      top: 0; bottom: 0; left: -100%;
+      width: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--green));
       border-radius: 999px;
-      width: 0%;
-      transition: width 0.75s ease;
+      animation: scan-slide 1.6s ease-in-out infinite;
+    }
+    @keyframes scan-slide {
+      0%   { left: -100%; }
+      50%  { left: 0%; }
+      100% { left: 100%; }
     }
 
-    /* ── RESULTS ── */
-    .results-section { display: none; flex-direction: column; gap: 20px; }
-    .results-section.visible { display: flex; }
-
-    .analyzed-url {
-      text-align: center;
-      font-size: 12px;
-      color: var(--muted);
-      word-break: break-all;
+    /* ── REVEAL ───────────────────────────────────── */
+    #revealSection {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      padding: 80px 20px 48px;
+      min-height: 100vh;
     }
-    .analyzed-url span { color: var(--accent); }
+    #revealSection.visible { display: flex; }
 
-    /* Score circle */
-    .score-wrap {
+    .reveal-inner {
+      width: 100%;
+      max-width: 540px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 12px;
+      gap: 24px;
     }
-    .circle-container { position: relative; width: 164px; height: 164px; }
-    .circle-container svg { transform: rotate(-90deg); }
-    .circle-center {
+
+    .reveal-teaser {
+      font-size: 16px;
+      color: var(--muted);
+      text-align: center;
+      opacity: 0;
+      transition: opacity 0.6s ease;
+    }
+    .reveal-teaser.in { opacity: 1; }
+
+    .score-circle-wrap {
+      position: relative;
+      width: 180px;
+      height: 180px;
+      opacity: 0;
+      transform: scale(0.9);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .score-circle-wrap.in { opacity: 1; transform: scale(1); }
+    .score-circle-wrap svg { transform: rotate(-90deg); }
+
+    .score-circle-center {
       position: absolute;
       inset: 0;
       display: flex;
@@ -181,54 +293,140 @@
       align-items: center;
       justify-content: center;
     }
-    .score-num   { font-family: 'Instrument Serif', serif; font-size: 44px; line-height: 1; }
-    .score-denom { font-size: 13px; color: var(--muted); }
-    .score-level {
-      font-family: 'Instrument Serif', serif;
-      font-size: 17px;
-      text-align: center;
-    }
-    .score-message {
-      font-size: 13px;
-      color: var(--muted);
-      text-align: center;
-      line-height: 1.6;
-      max-width: 380px;
-      margin-top: -4px;
-    }
-    .score-note {
-      font-size: 11px;
-      color: var(--muted);
-      text-align: center;
-    }
-    .score-note.partial { color: var(--orange); }
 
-    /* JS Warning */
-    .js-warning {
+    .reveal-num {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 96px;
+      line-height: 1;
+      color: var(--accent);
+    }
+    @media (max-width: 768px) { .reveal-num { font-size: 72px; } }
+
+    .reveal-denom {
+      font-size: 14px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .reveal-level {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 20px;
+      text-align: center;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .reveal-level.in { opacity: 1; transform: translateY(0); }
+
+    .reveal-diagnostic {
+      font-size: 15px;
+      font-style: italic;
+      color: #9D97FF;
+      text-align: center;
+      max-width: 400px;
+      line-height: 1.65;
+      min-height: 48px;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+    .reveal-diagnostic.in { opacity: 1; }
+
+    .js-warn {
       display: none;
-      background: rgba(239,159,39,0.1);
-      border: 1px solid rgba(239,159,39,0.35);
-      border-radius: 12px;
-      padding: 13px 16px;
-      font-size: 13px;
+      background: rgba(239,159,39,0.08);
+      border: 1px solid rgba(239,159,39,0.3);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 12px;
       color: var(--orange);
-      line-height: 1.55;
       text-align: center;
+      width: 100%;
+      line-height: 1.5;
     }
-    .js-warning.visible { display: block; }
+    .js-warn.visible { display: block; }
 
-    /* ── EMAIL CARD (intégré dans les résultats) ── */
+    .cats-wrap {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+    .cats-wrap.in { opacity: 1; }
+
+    .cat-row { display: flex; flex-direction: column; gap: 7px; }
+    .cat-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .cat-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .cat-fail {
+      color: var(--red);
+      animation: blink 1.2s step-start infinite;
+      font-size: 12px;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .cat-score {
+      font-family: 'Syne', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .cat-track {
+      height: 5px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .cat-fill {
+      height: 100%;
+      border-radius: 999px;
+      width: 0%;
+      transition: width 0.75s cubic-bezier(.4,0,.2,1);
+    }
+
+    /* ── EMAIL ────────────────────────────────────── */
+    #emailSection {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 20px 80px;
+    }
+    #emailSection.visible {
+      display: flex;
+      animation: fadeUp 0.55s ease forwards;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
     .email-card {
+      width: 100%;
+      max-width: 540px;
       background: var(--bg-card);
-      border: 1px solid var(--border);
+      border: 1px solid rgba(108,99,255,0.3);
       border-radius: 16px;
       padding: 28px 24px;
       display: flex;
       flex-direction: column;
       gap: 14px;
     }
+
     .email-title {
-      font-family: 'Instrument Serif', serif;
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
       font-size: 20px;
       color: var(--text);
       text-align: center;
@@ -238,87 +436,114 @@
       font-size: 13px;
       color: var(--muted);
       text-align: center;
-      line-height: 1.6;
-      margin-top: -4px;
+      line-height: 1.65;
     }
-    .email-error {
-      font-size: 12px;
-      color: var(--red);
-      text-align: center;
-      min-height: 16px;
+    .email-field {
+      width: 100%;
+      background: rgba(255,255,255,0.03);
+      border: 0.5px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 14px 16px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
-    .email-mention {
-      text-align: center;
-      font-size: 11px;
-      color: var(--muted);
+    .email-field:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(108,99,255,0.15);
     }
+    .email-field::placeholder { color: var(--muted); }
+    .email-err { font-size: 12px; color: var(--red); text-align: center; min-height: 16px; }
+    .email-mention { text-align: center; font-size: 11px; color: var(--muted); }
 
-    /* ── CONFIRMATION ── */
-    .confirm-section { display: none; flex-direction: column; gap: 20px; }
-    .confirm-section.visible { display: flex; }
-
-    .confirm-card {
-      background: rgba(0,229,160,0.07);
-      border: 1px solid rgba(0,229,160,0.3);
-      border-radius: 16px;
-      padding: 32px 24px;
-      text-align: center;
-      display: flex;
+    /* ── CONFIRM ──────────────────────────────────── */
+    #confirmSection {
+      display: none;
+      min-height: 100vh;
       flex-direction: column;
-      gap: 10px;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      text-align: center;
+      gap: 18px;
     }
+    #confirmSection.visible { display: flex; }
+
+    .check-svg { width: 80px; height: 80px; }
+
+    .check-circle {
+      fill: none;
+      stroke: var(--green);
+      stroke-width: 3;
+      stroke-dasharray: 201;
+      stroke-dashoffset: 201;
+      transition: stroke-dashoffset 0.65s cubic-bezier(.4,0,.2,1);
+    }
+    .check-circle.drawn { stroke-dashoffset: 0; }
+
+    .check-mark {
+      fill: none;
+      stroke: var(--green);
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 40;
+      stroke-dashoffset: 40;
+      transition: stroke-dashoffset 0.4s ease 0.65s;
+    }
+    .check-mark.drawn { stroke-dashoffset: 0; }
+
     .confirm-title {
-      font-family: 'Instrument Serif', serif;
-      font-size: 22px;
-      color: var(--green);
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 32px;
+      color: var(--text);
     }
     .confirm-sub {
-      font-size: 13px;
+      font-size: 15px;
       color: var(--muted);
-      line-height: 1.6;
+      line-height: 1.7;
     }
     .confirm-sub a { color: var(--accent); text-decoration: none; }
     .confirm-sub a:hover { text-decoration: underline; }
 
-    /* ── RESET ── */
     .reset-btn {
-      width: 100%;
       background: transparent;
       border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 13px;
+      padding: 12px 24px;
       color: var(--muted);
-      font-family: 'Inter', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 14px;
       cursor: pointer;
       transition: border-color 0.2s, color 0.2s;
+      margin-top: 8px;
     }
     .reset-btn:hover { border-color: var(--accent); color: var(--accent); }
   </style>
 </head>
 <body>
-<div id="app">
 
-  <!-- ══ INPUT ══ -->
-  <div class="input-section" id="inputSection">
-    <div class="brand">
-      <div class="brand-title">Ta landing page <span>convertit-elle vraiment ?</span></div>
-      <div class="brand-sub">Analyse gratuite · Score conversion, SEO, technique · Résultat en 15 s</div>
-    </div>
-
-    <div>
-      <label class="form-label" for="urlInput">Entre l'URL de ta landing page</label>
+<!-- ══ HERO ══ -->
+<div id="heroSection">
+  <canvas id="particleCanvas"></canvas>
+  <div class="hero-inner">
+    <h1 class="hero-h1" id="heroH1"></h1>
+    <p class="hero-sub" id="heroSub">Analyse gratuite · 5 catégories · Score sur 100 · Résultat en 15 s</p>
+    <div class="url-wrap" id="urlWrap">
       <input type="text" id="urlInput" class="url-input"
         placeholder="https://tonstartup.fr"
         autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
     </div>
-
-    <button class="analyze-btn" id="analyzeBtn">Analyser ma landing →</button>
-    <p class="btn-sub">Gratuit · 15 secondes · Aucune inscription</p>
-    <div class="error-box" id="errorBox"></div>
-
-    <div class="examples-hint">
-      <strong>Fonctionne mieux sur les sites statiques (WordPress, Webflow, Framer, Wix)</strong>
+    <div class="btn-wrap" id="btnWrap">
+      <div class="error-box" id="errorBox"></div>
+      <button class="analyze-btn" id="analyzeBtn">Analyser ma landing →</button>
+      <p class="btn-sub">Gratuit · 15 secondes · Aucune inscription</p>
+    </div>
+    <div class="pills-wrap" id="pillsWrap">
+      <div class="pills-hint">Fonctionne mieux sur les sites statiques (Webflow, Framer, WordPress…)</div>
       <div class="example-pills">
         <span class="example-pill" data-url="https://www.pennylane.com">pennylane.com</span>
         <span class="example-pill" data-url="https://alan.com">alan.com</span>
@@ -326,130 +551,208 @@
       </div>
     </div>
   </div>
+</div>
 
-  <!-- ══ LOADING ══ -->
-  <div class="loading-section" id="loadingSection">
-    <div class="loading-message" id="loadingMsg">Récupération du site...</div>
-    <div class="progress-track" style="width:100%">
-      <div class="progress-fill" id="progressFill"></div>
-    </div>
-  </div>
+<!-- ══ SCAN ══ -->
+<div id="scanSection">
+  <svg class="scan-spinner" viewBox="0 0 64 64" fill="none">
+    <circle cx="32" cy="32" r="28" stroke="rgba(108,99,255,0.15)" stroke-width="5"/>
+    <path d="M32 4 A28 28 0 0 1 60 32" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/>
+  </svg>
+  <div class="scan-msg" id="scanMsg">Récupération du site...</div>
+  <div class="scan-bar"><div class="scan-bar-fill"></div></div>
+</div>
 
-  <!-- ══ RESULTS ══ -->
-  <div class="results-section" id="resultsSection">
-    <div class="analyzed-url" id="analyzedUrl"></div>
+<!-- ══ REVEAL ══ -->
+<div id="revealSection">
+  <div class="reveal-inner">
+    <p class="reveal-teaser" id="revealTeaser">Ton score est...</p>
 
-    <div class="score-wrap">
-      <div class="circle-container">
-        <svg width="164" height="164" viewBox="0 0 164 164">
-          <circle cx="82" cy="82" r="70" fill="none"
-            stroke="rgba(255,255,255,0.06)" stroke-width="10"/>
-          <circle id="scoreArc" cx="82" cy="82" r="70" fill="none"
-            stroke="var(--accent)" stroke-width="10"
-            stroke-linecap="round"
-            stroke-dasharray="439.82"
-            stroke-dashoffset="439.82"
-            style="transition: stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1), stroke 0.4s ease;"/>
-        </svg>
-        <div class="circle-center">
-          <div class="score-num" id="scoreNum">0</div>
-          <div class="score-denom">/100</div>
-        </div>
-      </div>
-      <div class="score-level"   id="scoreLevel"></div>
-      <div class="score-message" id="scoreMessage"></div>
-      <div class="score-note"    id="scoreNote"></div>
-    </div>
-
-    <div class="js-warning" id="jsWarning">
-      ⚠️ Ce site utilise un framework JavaScript (Next.js / React / Vue).
-      L'analyse porte sur le HTML initial — certains éléments dynamiques peuvent ne pas être détectés.
-    </div>
-
-    <!-- Formulaire email intégré — obligatoire, pas de skip -->
-    <div class="email-card" id="emailCard">
-      <div class="email-title">Reçois ton audit complet par email</div>
-      <div class="email-sub">
-        Analyse IA détaillée + 3 actions concrètes pour booster ta conversion —
-        envoyé en moins de 2 minutes.
-      </div>
-      <input type="email" id="emailInput" class="url-input"
-        placeholder="ton@email.com" autocomplete="email"/>
-      <div class="email-error" id="emailError"></div>
-      <button class="analyze-btn" id="emailSubmitBtn">Recevoir mon audit →</button>
-      <p class="email-mention">Aucun spam · Désabonnement en 1 clic</p>
-    </div>
-  </div>
-
-  <!-- ══ CONFIRMATION ══ -->
-  <div class="confirm-section" id="confirmSection">
-    <div class="confirm-card">
-      <div class="confirm-title">C'est parti.</div>
-      <div class="confirm-sub">
-        Vérifie ta boîte dans 2 minutes.<br><br>
-        En attendant → <a href="https://liova.studio" target="_blank" rel="noopener">liova.studio</a>
+    <div class="score-circle-wrap" id="scoreCircleWrap">
+      <svg width="180" height="180" viewBox="0 0 180 180">
+        <circle cx="90" cy="90" r="76" fill="none"
+          stroke="rgba(255,255,255,0.06)" stroke-width="10"/>
+        <circle id="scoreArc" cx="90" cy="90" r="76" fill="none"
+          stroke="var(--accent)" stroke-width="10"
+          stroke-linecap="round"
+          stroke-dasharray="477.52"
+          stroke-dashoffset="477.52"
+          style="transition: stroke-dashoffset 1.3s cubic-bezier(.4,0,.2,1), stroke 0.4s ease;"/>
+      </svg>
+      <div class="score-circle-center">
+        <div class="reveal-num" id="revealNum">0</div>
+        <div class="reveal-denom">/100</div>
       </div>
     </div>
-    <button class="reset-btn" id="resetBtn">← Analyser une autre page</button>
-  </div>
 
+    <div class="reveal-level" id="revealLevel"></div>
+    <div class="reveal-diagnostic" id="revealDiag"></div>
+    <div class="js-warn" id="jsWarn">
+      ⚠️ Site JS détecté (Next.js / React / Vue) — score partiel basé sur le HTML initial.
+    </div>
+    <div class="cats-wrap" id="catsWrap"></div>
+  </div>
+</div>
+
+<!-- ══ EMAIL ══ -->
+<div id="emailSection">
+  <div class="email-card">
+    <div class="email-title">Reçois ton audit complet par email</div>
+    <div class="email-sub">Analyse IA détaillée + 3 actions concrètes pour booster ta conversion — envoyé en moins de 2 minutes.</div>
+    <input type="email" id="emailInput" class="email-field" placeholder="ton@email.com" autocomplete="email"/>
+    <div class="email-err" id="emailErr"></div>
+    <button class="analyze-btn" id="emailBtn">Recevoir mon audit →</button>
+    <p class="email-mention">Aucun spam · Désabonnement en 1 clic</p>
+  </div>
+</div>
+
+<!-- ══ CONFIRM ══ -->
+<div id="confirmSection">
+  <svg class="check-svg" viewBox="0 0 80 80">
+    <circle class="check-circle" id="checkCircle" cx="40" cy="40" r="32"/>
+    <path class="check-mark" id="checkMark" d="M24 41 L34 51 L56 29"/>
+  </svg>
+  <div class="confirm-title">C'est parti.</div>
+  <div class="confirm-sub">
+    Vérifie ta boîte dans 2 minutes.<br><br>
+    En attendant → <a href="https://liova.studio" target="_blank" rel="noopener">liova.studio</a>
+  </div>
+  <button class="reset-btn" id="resetBtn">← Analyser une autre page</button>
 </div>
 
 <script>
 const $ = id => document.getElementById(id);
 
-const inputSection   = $('inputSection');
-const loadingSection = $('loadingSection');
-const resultsSection = $('resultsSection');
-const confirmSection = $('confirmSection');
-const urlInput       = $('urlInput');
-const analyzeBtn     = $('analyzeBtn');
-const errorBox       = $('errorBox');
-const loadingMsg     = $('loadingMsg');
-const progressFill   = $('progressFill');
-const scoreArc       = $('scoreArc');
-const scoreNum       = $('scoreNum');
-const scoreLevel     = $('scoreLevel');
-const scoreMessage   = $('scoreMessage');
-const scoreNote      = $('scoreNote');
-const jsWarning      = $('jsWarning');
-const analyzedUrl    = $('analyzedUrl');
-const emailCard      = $('emailCard');
-const emailInput     = $('emailInput');
-const emailSubmitBtn = $('emailSubmitBtn');
-const emailError     = $('emailError');
-const resetBtn       = $('resetBtn');
+// ── DOM refs ──────────────────────────────────────────────────
+const heroSection   = $('heroSection');
+const scanSection   = $('scanSection');
+const revealSection = $('revealSection');
+const emailSection  = $('emailSection');
+const confirmSection= $('confirmSection');
+const urlInput      = $('urlInput');
+const analyzeBtn    = $('analyzeBtn');
+const errorBox      = $('errorBox');
+const scanMsg       = $('scanMsg');
+const revealTeaser  = $('revealTeaser');
+const scoreCircleWrap = $('scoreCircleWrap');
+const scoreArc      = $('scoreArc');
+const revealNum     = $('revealNum');
+const revealLevel   = $('revealLevel');
+const revealDiag    = $('revealDiag');
+const jsWarn        = $('jsWarn');
+const catsWrap      = $('catsWrap');
+const emailInput    = $('emailInput');
+const emailBtn      = $('emailBtn');
+const emailErr      = $('emailErr');
+const resetBtn      = $('resetBtn');
+const checkCircle   = $('checkCircle');
+const checkMark     = $('checkMark');
 
 let pendingData = null;
 
-// ── Events ──────────────────────────────────────────────────
+// ── Init hero ─────────────────────────────────────────────────
+(function initHero() {
+  const h1 = $('heroH1');
+  const words = ['Ta', 'landing', 'page', 'convertit-elle', 'vraiment\u00a0?'];
+  h1.innerHTML = words.map((w, i) =>
+    `<span class="word${i >= 3 ? ' accent' : ''}">${w}</span>`
+  ).join(' ');
+
+  words.forEach((_, i) => {
+    setTimeout(() => h1.querySelectorAll('.word')[i].classList.add('in'), 80 + i * 90);
+  });
+  setTimeout(() => $('heroSub').classList.add('in'),  520);
+  setTimeout(() => $('urlWrap').classList.add('in'),  650);
+  setTimeout(() => $('btnWrap').classList.add('in'),  800);
+  setTimeout(() => $('pillsWrap').classList.add('in'), 950);
+
+  initParticles();
+})();
+
+// ── Canvas particles ──────────────────────────────────────────
+function initParticles() {
+  const canvas = $('particleCanvas');
+  const ctx = canvas.getContext('2d');
+  let pts = [];
+  let raf;
+
+  function resize() {
+    canvas.width  = heroSection.offsetWidth;
+    canvas.height = heroSection.offsetHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  for (let i = 0; i < 55; i++) {
+    pts.push({
+      x:  Math.random() * canvas.width,
+      y:  Math.random() * canvas.height,
+      vx: (Math.random() - 0.5) * 0.28,
+      vy: (Math.random() - 0.5) * 0.28,
+      r:  Math.random() * 1.8 + 0.8,
+    });
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    pts.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(108,99,255,0.3)';
+      ctx.fill();
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.x < 0) p.x = canvas.width;
+      if (p.x > canvas.width)  p.x = 0;
+      if (p.y < 0) p.y = canvas.height;
+      if (p.y > canvas.height) p.y = 0;
+    });
+    raf = requestAnimationFrame(draw);
+  }
+  draw();
+
+  // Stop when hero hidden
+  return () => cancelAnimationFrame(raf);
+}
+
+// ── Events ────────────────────────────────────────────────────
 analyzeBtn.addEventListener('click', run);
 urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') run(); });
-emailSubmitBtn.addEventListener('click', submitEmail);
+emailBtn.addEventListener('click', submitEmail);
 emailInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitEmail(); });
 resetBtn.addEventListener('click', reset);
 document.querySelectorAll('.example-pill').forEach(p =>
   p.addEventListener('click', () => { urlInput.value = p.dataset.url; urlInput.focus(); })
 );
 
-// ── Run analysis ─────────────────────────────────────────────
+// ── Run analysis ──────────────────────────────────────────────
 async function run() {
   let url = urlInput.value.trim();
-  if (!url) { showError("Saisis l'URL de ta landing page pour commencer."); return; }
+  if (!url) {
+    shakeInput();
+    showError('Saisis l\'URL de ta landing page pour commencer.');
+    return;
+  }
   if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
 
   hideError();
   analyzeBtn.disabled = true;
-  showLoading();
+  showScan();
 
-  const msgs  = ['Récupération du site...', 'Analyse du tunnel de conversion...', 'Vérification de la crédibilité...', 'Calcul du score...'];
-  const steps = [12, 38, 65, 88];
+  const msgs = [
+    'Récupération du site...',
+    'Analyse du tunnel de conversion...',
+    'Vérification des éléments de confiance...',
+    'Évaluation du branding...',
+    'Calcul de l\'architecture...',
+    'Calcul du score final...'
+  ];
   let mi = 0;
-  setMsg(msgs[0], steps[0]);
+  scanMsg.textContent = msgs[0];
   const ticker = setInterval(() => {
     mi = Math.min(mi + 1, msgs.length - 1);
-    fadeMsg(msgs[mi], steps[mi]);
-  }, 900);
+    fadeScanMsg(msgs[mi]);
+  }, 2000);
 
   try {
     const res  = await fetch('/api/analyze', {
@@ -458,7 +761,6 @@ async function run() {
       body: JSON.stringify({ url })
     });
     clearInterval(ticker);
-    setProgress(100);
 
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Erreur serveur.');
@@ -475,78 +777,153 @@ async function run() {
       htmlContent:     data.htmlContent || ''
     };
 
-    setTimeout(() => {
-      hideLoading();
-      showResults();
-    }, 300);
+    hideScan();
+    showReveal();
+
   } catch (err) {
     clearInterval(ticker);
-    hideLoading();
+    hideScan();
     backToInput();
     showError(err.message || 'Service temporairement indisponible. Réessaie dans quelques instants.');
   }
 }
 
-// ── Show results ─────────────────────────────────────────────
-function showResults() {
-  const { score, url, isJsHeavy, verifiableCount } = pendingData;
-  const cfg = levelConfig(score);
-
-  resultsSection.classList.add('visible');
-  analyzedUrl.innerHTML = `Résultats pour <span>${esc(url)}</span>`;
-
-  if (isJsHeavy) {
-    jsWarning.classList.add('visible');
-    scoreNote.textContent = `Score partiel — site JS détecté · ${verifiableCount} critères vérifiables`;
-    scoreNote.className = 'score-note partial';
-  } else {
-    jsWarning.classList.remove('visible');
-    scoreNote.textContent = `Score calculé sur ${verifiableCount} critères`;
-    scoreNote.className = 'score-note';
-  }
-
-  scoreArc.style.stroke   = cfg.color;
-  scoreLevel.style.color  = cfg.color;
-  scoreNum.style.color    = cfg.color;
-  scoreLevel.textContent  = cfg.label;
-  scoreMessage.textContent = cfg.message;
-
-  // Animate counter
-  let count = 0;
-  const step = Math.max(1, Math.ceil(score / 45));
-  const t = setInterval(() => {
-    count = Math.min(count + step, score);
-    scoreNum.textContent = count;
-    if (count >= score) clearInterval(t);
-  }, 22);
-
-  setTimeout(() => {
-    const C = 439.82;
-    scoreArc.style.strokeDashoffset = C - (score / 100) * C;
-  }, 80);
-
-  setTimeout(() => {
-    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, 120);
-
-  // Focus email input
-  setTimeout(() => { emailInput.value = ''; emailInput.focus(); }, 600);
+// ── Scan helpers ──────────────────────────────────────────────
+function showScan() { scanSection.classList.add('visible'); }
+function hideScan() { scanSection.classList.remove('visible'); }
+function fadeScanMsg(txt) {
+  scanMsg.style.opacity = '0';
+  setTimeout(() => { scanMsg.textContent = txt; scanMsg.style.opacity = '1'; }, 260);
 }
 
-// ── Submit email ─────────────────────────────────────────────
+// ── Reveal sequence ───────────────────────────────────────────
+function showReveal() {
+  heroSection.style.display = 'none';
+  revealSection.classList.add('visible');
+  window.scrollTo({ top: 0, behavior: 'instant' });
+
+  const { score, isJsHeavy } = pendingData;
+  const cfg = levelConfig(score);
+
+  // Phase A — teaser
+  setTimeout(() => revealTeaser.classList.add('in'), 300);
+
+  // Phase B — circle + counter
+  setTimeout(() => {
+    scoreCircleWrap.classList.add('in');
+    revealNum.style.color = cfg.color;
+    animateCounter(0, score, 1800);
+  }, 900);
+
+  // Phase C — arc draw
+  setTimeout(() => {
+    scoreArc.style.stroke = cfg.color;
+    const C = 477.52;
+    scoreArc.style.strokeDashoffset = C - (score / 100) * C;
+  }, 1100);
+
+  // Phase D — level label
+  setTimeout(() => {
+    revealLevel.textContent = cfg.label;
+    revealLevel.style.color = cfg.color;
+    revealLevel.classList.add('in');
+  }, 3000);
+
+  // Phase E — typewriter diagnostic
+  setTimeout(() => {
+    revealDiag.classList.add('in');
+    typewrite(revealDiag, cfg.message, 28);
+  }, 4200);
+
+  // JS warning
+  if (isJsHeavy) setTimeout(() => jsWarn.classList.add('visible'), 4800);
+
+  // Phase F — category bars
+  setTimeout(() => buildCats(cfg), 5800);
+
+  // Show email card after all phases
+  setTimeout(() => {
+    emailSection.classList.add('visible');
+    emailSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(() => emailInput.focus(), 400);
+  }, 8200);
+}
+
+// ── Counter animation ─────────────────────────────────────────
+function animateCounter(from, to, duration) {
+  const start = performance.now();
+  function frame(now) {
+    const t = Math.min((now - start) / duration, 1);
+    const ease = 1 - Math.pow(1 - t, 3); // easeOutCubic
+    revealNum.textContent = Math.round(from + (to - from) * ease);
+    if (t < 1) requestAnimationFrame(frame);
+    else revealNum.textContent = to;
+  }
+  requestAnimationFrame(frame);
+}
+
+// ── Typewriter ────────────────────────────────────────────────
+function typewrite(el, text, delay) {
+  el.textContent = '';
+  let i = 0;
+  function tick() {
+    if (i < text.length) { el.textContent += text[i++]; setTimeout(tick, delay); }
+  }
+  tick();
+}
+
+// ── Category bars ─────────────────────────────────────────────
+function buildCats() {
+  const { scores } = pendingData;
+  const cats = [
+    { label: 'Clarté du tunnel',       key: 'tunnel',       max: 25 },
+    { label: 'Clarté de l\'offre',     key: 'offre',        max: 25 },
+    { label: 'Confiance & Crédibilité',key: 'confiance',    max: 25 },
+    { label: 'Branding & Cohérence',   key: 'branding',     max: 15 },
+    { label: 'Architecture de base',   key: 'architecture', max: 10 },
+  ];
+
+  catsWrap.innerHTML = '';
+  cats.forEach(cat => {
+    const val  = scores[cat.key] || 0;
+    const pct  = Math.round(val / cat.max * 100);
+    const fail = pct < 50;
+    const color= pct >= 75 ? '#00E5A0' : pct >= 50 ? '#6C63FF' : pct >= 25 ? '#EF9F27' : '#FF4D4D';
+
+    const row = document.createElement('div');
+    row.className = 'cat-row';
+    row.innerHTML = `
+      <div class="cat-header">
+        <span class="cat-name">${esc(cat.label)}${fail ? '<span class="cat-fail"> ✗</span>' : ''}</span>
+        <span class="cat-score" style="color:${color}">${val}/${cat.max}</span>
+      </div>
+      <div class="cat-track">
+        <div class="cat-fill" style="background:${color}" data-pct="${pct}"></div>
+      </div>`;
+    catsWrap.appendChild(row);
+  });
+
+  catsWrap.classList.add('in');
+
+  catsWrap.querySelectorAll('.cat-fill').forEach((fill, i) => {
+    setTimeout(() => { fill.style.width = fill.dataset.pct + '%'; }, i * 150 + 80);
+  });
+}
+
+// ── Submit email ──────────────────────────────────────────────
 async function submitEmail() {
   const email = emailInput.value.trim();
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    emailError.textContent = 'Saisis une adresse email valide.';
+    emailErr.textContent = 'Saisis une adresse email valide.';
     emailInput.style.borderColor = 'var(--red)';
     setTimeout(() => { emailInput.style.borderColor = ''; }, 1200);
     return;
   }
-  emailError.textContent = '';
-  emailSubmitBtn.textContent = 'Analyse en cours…';
-  emailSubmitBtn.disabled = true;
+  emailErr.textContent = '';
+  emailBtn.textContent = 'Analyse en cours…';
+  emailBtn.disabled = true;
 
-  // Fire-and-forget — on ne bloque pas l'UX pour l'appel IA (jusqu'à 15 s)
+  // Fire-and-forget — UX non bloquée
   fetch('/api/analyze-ai', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -561,36 +938,63 @@ async function submitEmail() {
     })
   }).catch(() => {});
 
-  // Afficher la confirmation immédiatement
-  resultsSection.classList.remove('visible');
+  revealSection.classList.remove('visible');
+  emailSection.classList.remove('visible');
+  showConfirm();
+}
+
+// ── Confirm ───────────────────────────────────────────────────
+function showConfirm() {
   confirmSection.classList.add('visible');
-  confirmSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  setTimeout(() => checkCircle.classList.add('drawn'), 250);
+  // check-mark transition is delayed via CSS (0.65s)
+  setTimeout(() => checkMark.classList.add('drawn'), 300);
 }
 
 // ── Reset ─────────────────────────────────────────────────────
 function reset() {
-  resultsSection.classList.remove('visible');
+  // hide all
+  revealSection.classList.remove('visible');
+  emailSection.classList.remove('visible');
   confirmSection.classList.remove('visible');
-  scoreNum.textContent  = '0';
-  scoreNum.style.color  = '';
-  scoreArc.style.strokeDashoffset = '439.82';
+  scanSection.classList.remove('visible');
+
+  // reset reveal
+  revealTeaser.classList.remove('in');
+  scoreCircleWrap.classList.remove('in');
+  revealNum.textContent = '0';
+  revealNum.style.color = '';
+  scoreArc.style.strokeDashoffset = '477.52';
   scoreArc.style.stroke = 'var(--accent)';
-  scoreLevel.textContent   = '';
-  scoreMessage.textContent = '';
-  scoreNote.textContent    = '';
-  jsWarning.classList.remove('visible');
-  emailCard.style.display = '';
-  emailSubmitBtn.textContent = 'Recevoir mon audit →';
-  emailSubmitBtn.disabled = false;
-  progressFill.style.width = '0%';
+  revealLevel.classList.remove('in');
+  revealLevel.textContent = '';
+  revealDiag.classList.remove('in');
+  revealDiag.textContent = '';
+  jsWarn.classList.remove('visible');
+  catsWrap.classList.remove('in');
+  catsWrap.innerHTML = '';
+
+  // reset email
+  emailInput.value = '';
+  emailErr.textContent = '';
+  emailBtn.textContent = 'Recevoir mon audit →';
+  emailBtn.disabled = false;
+
+  // reset confirm
+  checkCircle.classList.remove('drawn');
+  checkMark.classList.remove('drawn');
+
+  // reset hero
   pendingData = null;
-  backToInput();
+  analyzeBtn.disabled = false;
   urlInput.value = '';
-  urlInput.focus();
+  hideError();
+  heroSection.style.display = '';
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ── Helpers ───────────────────────────────────────────────────
+// ── Level config ──────────────────────────────────────────────
 function levelConfig(s) {
   if (s <= 39) return {
     label:   'Landing page à reconstruire',
@@ -609,27 +1013,29 @@ function levelConfig(s) {
   };
   if (s <= 89) return {
     label:   'Landing solide',
-    message: 'Ta page convertit correctement. Des ajustements peuvent encore l\'améliorer.',
+    message: 'Ta page convertit correctement. Des ajustements ciblés peuvent encore l\'améliorer.',
     color:   '#00E5A0'
   };
   return {
     label:   'Landing très bien optimisée',
-    message: 'Excellent travail. Focus sur le trafic maintenant.',
+    message: 'Excellent travail. Focus sur le trafic et les tests A/B maintenant.',
     color:   '#00E5A0'
   };
 }
 
-function esc(str) {
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+// ── Helpers ───────────────────────────────────────────────────
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 function showError(msg) { errorBox.textContent = msg; errorBox.classList.add('visible'); }
 function hideError()    { errorBox.classList.remove('visible'); }
-function showLoading()  { inputSection.style.display = 'none'; loadingSection.classList.add('visible'); progressFill.style.width = '0%'; }
-function hideLoading()  { loadingSection.classList.remove('visible'); }
-function backToInput()  { inputSection.style.display = ''; loadingSection.classList.remove('visible'); analyzeBtn.disabled = false; }
-function setMsg(t, p)   { loadingMsg.textContent = t; setProgress(p); }
-function fadeMsg(t, p)  { loadingMsg.style.opacity='0'; setTimeout(()=>{ loadingMsg.textContent=t; loadingMsg.style.opacity='1'; setProgress(p); },230); }
-function setProgress(p) { progressFill.style.width = p + '%'; }
+function backToInput()  { analyzeBtn.disabled = false; }
+function shakeInput()   {
+  urlInput.classList.remove('shake');
+  void urlInput.offsetWidth;
+  urlInput.classList.add('shake');
+  urlInput.addEventListener('animationend', () => urlInput.classList.remove('shake'), { once: true });
+}
 </script>
 </body>
 </html>

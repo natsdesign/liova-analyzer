@@ -251,7 +251,7 @@
       display: none;
       flex-direction: column;
       align-items: center;
-      padding: 80px 20px 48px;
+      padding: 80px 20px 80px;
       min-height: 100vh;
     }
     #revealSection.visible { display: flex; }
@@ -320,101 +320,9 @@
     }
     .reveal-level.in { opacity: 1; transform: translateY(0); }
 
-    .reveal-diagnostic {
-      font-size: 15px;
-      font-style: italic;
-      color: #9D97FF;
-      text-align: center;
-      max-width: 400px;
-      line-height: 1.65;
-      min-height: 48px;
-      opacity: 0;
-      transition: opacity 0.4s ease;
-    }
-    .reveal-diagnostic.in { opacity: 1; }
-
-    .js-warn {
-      display: none;
-      background: rgba(239,159,39,0.08);
-      border: 1px solid rgba(239,159,39,0.3);
-      border-radius: 10px;
-      padding: 12px 16px;
-      font-size: 12px;
-      color: var(--orange);
-      text-align: center;
+    /* ── EMAIL CARD (inline in reveal) ───────────── */
+    .email-gate {
       width: 100%;
-      line-height: 1.5;
-    }
-    .js-warn.visible { display: block; }
-
-    .cats-wrap {
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      opacity: 0;
-      transition: opacity 0.4s ease;
-    }
-    .cats-wrap.in { opacity: 1; }
-
-    .cat-row { display: flex; flex-direction: column; gap: 7px; }
-    .cat-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .cat-name {
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .cat-fail {
-      color: var(--red);
-      animation: blink 1.2s step-start infinite;
-      font-size: 12px;
-    }
-    @keyframes blink { 50% { opacity: 0; } }
-
-    .cat-score {
-      font-family: 'Syne', sans-serif;
-      font-size: 13px;
-      font-weight: 700;
-    }
-    .cat-track {
-      height: 5px;
-      background: rgba(255,255,255,0.06);
-      border-radius: 999px;
-      overflow: hidden;
-    }
-    .cat-fill {
-      height: 100%;
-      border-radius: 999px;
-      width: 0%;
-      transition: width 0.75s cubic-bezier(.4,0,.2,1);
-    }
-
-    /* ── EMAIL ────────────────────────────────────── */
-    #emailSection {
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      padding: 0 20px 80px;
-    }
-    #emailSection.visible {
-      display: flex;
-      animation: fadeUp 0.55s ease forwards;
-    }
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(20px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    .email-card {
-      width: 100%;
-      max-width: 540px;
       background: var(--bg-card);
       border: 1px solid rgba(108,99,255,0.3);
       border-radius: 16px;
@@ -422,7 +330,11 @@
       display: flex;
       flex-direction: column;
       gap: 14px;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.55s ease, transform 0.55s ease;
     }
+    .email-gate.in { opacity: 1; transform: translateY(0); }
 
     .email-title {
       font-family: 'Syne', sans-serif;
@@ -586,23 +498,16 @@
     </div>
 
     <div class="reveal-level" id="revealLevel"></div>
-    <div class="reveal-diagnostic" id="revealDiag"></div>
-    <div class="js-warn" id="jsWarn">
-      ⚠️ Site JS détecté (Next.js / React / Vue) — score partiel basé sur le HTML initial.
-    </div>
-    <div class="cats-wrap" id="catsWrap"></div>
-  </div>
-</div>
 
-<!-- ══ EMAIL ══ -->
-<div id="emailSection">
-  <div class="email-card">
-    <div class="email-title">Reçois ton audit complet par email</div>
-    <div class="email-sub">Analyse IA détaillée + 3 actions concrètes pour booster ta conversion — envoyé en moins de 2 minutes.</div>
-    <input type="email" id="emailInput" class="email-field" placeholder="ton@email.com" autocomplete="email"/>
-    <div class="email-err" id="emailErr"></div>
-    <button class="analyze-btn" id="emailBtn">Recevoir mon audit →</button>
-    <p class="email-mention">Aucun spam · Désabonnement en 1 clic</p>
+    <!-- Gate email — visible après le label -->
+    <div class="email-gate" id="emailGate">
+      <div class="email-title">Reçois le détail complet de ton analyse</div>
+      <div class="email-sub">Catégories · Diagnostic IA · 3 priorités concrètes — envoyé en 2 minutes.</div>
+      <input type="email" id="emailInput" class="email-field" placeholder="ton@email.com" autocomplete="email"/>
+      <div class="email-err" id="emailErr"></div>
+      <button class="analyze-btn" id="emailBtn">Recevoir mon rapport →</button>
+      <p class="email-mention">Aucun spam · Désabonnement en 1 clic</p>
+    </div>
   </div>
 </div>
 
@@ -624,29 +529,26 @@
 const $ = id => document.getElementById(id);
 
 // ── DOM refs ──────────────────────────────────────────────────
-const heroSection   = $('heroSection');
-const scanSection   = $('scanSection');
-const revealSection = $('revealSection');
-const emailSection  = $('emailSection');
-const confirmSection= $('confirmSection');
-const urlInput      = $('urlInput');
-const analyzeBtn    = $('analyzeBtn');
-const errorBox      = $('errorBox');
-const scanMsg       = $('scanMsg');
-const revealTeaser  = $('revealTeaser');
+const heroSection    = $('heroSection');
+const scanSection    = $('scanSection');
+const revealSection  = $('revealSection');
+const confirmSection = $('confirmSection');
+const urlInput       = $('urlInput');
+const analyzeBtn     = $('analyzeBtn');
+const errorBox       = $('errorBox');
+const scanMsg        = $('scanMsg');
+const revealTeaser   = $('revealTeaser');
 const scoreCircleWrap = $('scoreCircleWrap');
-const scoreArc      = $('scoreArc');
-const revealNum     = $('revealNum');
-const revealLevel   = $('revealLevel');
-const revealDiag    = $('revealDiag');
-const jsWarn        = $('jsWarn');
-const catsWrap      = $('catsWrap');
-const emailInput    = $('emailInput');
-const emailBtn      = $('emailBtn');
-const emailErr      = $('emailErr');
-const resetBtn      = $('resetBtn');
-const checkCircle   = $('checkCircle');
-const checkMark     = $('checkMark');
+const scoreArc       = $('scoreArc');
+const revealNum      = $('revealNum');
+const revealLevel    = $('revealLevel');
+const emailGate      = $('emailGate');
+const emailInput     = $('emailInput');
+const emailBtn       = $('emailBtn');
+const emailErr       = $('emailErr');
+const resetBtn       = $('resetBtn');
+const checkCircle    = $('checkCircle');
+const checkMark      = $('checkMark');
 
 let pendingData = null;
 
@@ -711,7 +613,6 @@ function initParticles() {
   }
   draw();
 
-  // Stop when hero hidden
   return () => cancelAnimationFrame(raf);
 }
 
@@ -802,7 +703,7 @@ function showReveal() {
   revealSection.classList.add('visible');
   window.scrollTo({ top: 0, behavior: 'instant' });
 
-  const { score, isJsHeavy } = pendingData;
+  const { score } = pendingData;
   const cfg = levelConfig(score);
 
   // Phase A — teaser
@@ -829,24 +730,12 @@ function showReveal() {
     revealLevel.classList.add('in');
   }, 3000);
 
-  // Phase E — typewriter diagnostic
+  // Phase E — email gate
   setTimeout(() => {
-    revealDiag.classList.add('in');
-    typewrite(revealDiag, cfg.message, 28);
-  }, 4200);
-
-  // JS warning
-  if (isJsHeavy) setTimeout(() => jsWarn.classList.add('visible'), 4800);
-
-  // Phase F — category bars
-  setTimeout(() => buildCats(cfg), 5800);
-
-  // Show email card after all phases
-  setTimeout(() => {
-    emailSection.classList.add('visible');
-    emailSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    emailGate.classList.add('in');
+    emailGate.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     setTimeout(() => emailInput.focus(), 400);
-  }, 8200);
+  }, 3700);
 }
 
 // ── Counter animation ─────────────────────────────────────────
@@ -854,60 +743,12 @@ function animateCounter(from, to, duration) {
   const start = performance.now();
   function frame(now) {
     const t = Math.min((now - start) / duration, 1);
-    const ease = 1 - Math.pow(1 - t, 3); // easeOutCubic
+    const ease = 1 - Math.pow(1 - t, 3);
     revealNum.textContent = Math.round(from + (to - from) * ease);
     if (t < 1) requestAnimationFrame(frame);
     else revealNum.textContent = to;
   }
   requestAnimationFrame(frame);
-}
-
-// ── Typewriter ────────────────────────────────────────────────
-function typewrite(el, text, delay) {
-  el.textContent = '';
-  let i = 0;
-  function tick() {
-    if (i < text.length) { el.textContent += text[i++]; setTimeout(tick, delay); }
-  }
-  tick();
-}
-
-// ── Category bars ─────────────────────────────────────────────
-function buildCats() {
-  const { scores } = pendingData;
-  const cats = [
-    { label: 'Clarté du tunnel',       key: 'tunnel',       max: 25 },
-    { label: 'Clarté de l\'offre',     key: 'offre',        max: 25 },
-    { label: 'Confiance & Crédibilité',key: 'confiance',    max: 25 },
-    { label: 'Branding & Cohérence',   key: 'branding',     max: 15 },
-    { label: 'Architecture de base',   key: 'architecture', max: 10 },
-  ];
-
-  catsWrap.innerHTML = '';
-  cats.forEach(cat => {
-    const val  = scores[cat.key] || 0;
-    const pct  = Math.round(val / cat.max * 100);
-    const fail = pct < 50;
-    const color= pct >= 75 ? '#00E5A0' : pct >= 50 ? '#6C63FF' : pct >= 25 ? '#EF9F27' : '#FF4D4D';
-
-    const row = document.createElement('div');
-    row.className = 'cat-row';
-    row.innerHTML = `
-      <div class="cat-header">
-        <span class="cat-name">${esc(cat.label)}${fail ? '<span class="cat-fail"> ✗</span>' : ''}</span>
-        <span class="cat-score" style="color:${color}">${val}/${cat.max}</span>
-      </div>
-      <div class="cat-track">
-        <div class="cat-fill" style="background:${color}" data-pct="${pct}"></div>
-      </div>`;
-    catsWrap.appendChild(row);
-  });
-
-  catsWrap.classList.add('in');
-
-  catsWrap.querySelectorAll('.cat-fill').forEach((fill, i) => {
-    setTimeout(() => { fill.style.width = fill.dataset.pct + '%'; }, i * 150 + 80);
-  });
 }
 
 // ── Submit email ──────────────────────────────────────────────
@@ -920,10 +761,9 @@ async function submitEmail() {
     return;
   }
   emailErr.textContent = '';
-  emailBtn.textContent = 'Analyse en cours…';
+  emailBtn.textContent = 'Envoi en cours…';
   emailBtn.disabled = true;
 
-  // Fire-and-forget — UX non bloquée
   fetch('/api/analyze-ai', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -939,7 +779,6 @@ async function submitEmail() {
   }).catch(() => {});
 
   revealSection.classList.remove('visible');
-  emailSection.classList.remove('visible');
   showConfirm();
 }
 
@@ -948,15 +787,12 @@ function showConfirm() {
   confirmSection.classList.add('visible');
   window.scrollTo({ top: 0, behavior: 'smooth' });
   setTimeout(() => checkCircle.classList.add('drawn'), 250);
-  // check-mark transition is delayed via CSS (0.65s)
   setTimeout(() => checkMark.classList.add('drawn'), 300);
 }
 
 // ── Reset ─────────────────────────────────────────────────────
 function reset() {
-  // hide all
   revealSection.classList.remove('visible');
-  emailSection.classList.remove('visible');
   confirmSection.classList.remove('visible');
   scanSection.classList.remove('visible');
 
@@ -969,16 +805,12 @@ function reset() {
   scoreArc.style.stroke = 'var(--accent)';
   revealLevel.classList.remove('in');
   revealLevel.textContent = '';
-  revealDiag.classList.remove('in');
-  revealDiag.textContent = '';
-  jsWarn.classList.remove('visible');
-  catsWrap.classList.remove('in');
-  catsWrap.innerHTML = '';
 
-  // reset email
+  // reset email gate
+  emailGate.classList.remove('in');
   emailInput.value = '';
   emailErr.textContent = '';
-  emailBtn.textContent = 'Recevoir mon audit →';
+  emailBtn.textContent = 'Recevoir mon rapport →';
   emailBtn.disabled = false;
 
   // reset confirm
@@ -998,27 +830,22 @@ function reset() {
 function levelConfig(s) {
   if (s <= 39) return {
     label:   'Landing page à reconstruire',
-    message: 'Ton trafic arrive et repart. Chaque visiteur est de l\'argent perdu.',
     color:   '#FF4D4D'
   };
   if (s <= 59) return {
     label:   'Potentiel sous-exploité',
-    message: 'Ta landing existe mais ne convertit pas. Tu laisses des leads sur la table chaque jour.',
     color:   '#EF9F27'
   };
   if (s <= 74) return {
     label:   'Bonne base, optimisations critiques',
-    message: 'Quelques points bloquants empêchent ta landing d\'atteindre son vrai potentiel.',
     color:   '#6C63FF'
   };
   if (s <= 89) return {
     label:   'Landing solide',
-    message: 'Ta page convertit correctement. Des ajustements ciblés peuvent encore l\'améliorer.',
     color:   '#00E5A0'
   };
   return {
     label:   'Landing très bien optimisée',
-    message: 'Excellent travail. Focus sur le trafic et les tests A/B maintenant.',
     color:   '#00E5A0'
   };
 }
